@@ -1,0 +1,44 @@
+name: Auto Update Weekly Spor Toto Fixture
+
+on:
+  schedule:
+    # Salı ve Cuma günleri saat 09:00 UTC (12:00 TSİ) - Yeni bülten çıkış saatleri
+    - cron: '0 9 * * 2,5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update_fixture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch Latest Bulletin
+        run: node scripts/fetchLatestBulletin.js
+
+      - name: Run Tests
+        run: npm run test
+
+      - name: Commit and Push if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ -n $(git status -s) ]]; then
+            git add .
+            git commit -m "chore(fixture): auto-update weekly Spor Toto bulletin via GitHub Cron"
+            git push origin master
+          else
+            echo "Fikstür zaten güncel, değişiklik yok."
+          fi
