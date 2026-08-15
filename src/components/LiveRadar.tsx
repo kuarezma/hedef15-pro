@@ -1,5 +1,5 @@
 import React from 'react';
-import { Column, Match } from '../core/types';
+import { Match } from '../core/types';
 import { useLiveSimulator } from '../hooks/useLiveSimulator';
 import {
   Radio,
@@ -7,23 +7,22 @@ import {
   Pause,
   RotateCcw,
   FastForward,
-  Activity,
   Flame,
   Volume2,
   VolumeX,
   RefreshCw,
   Clock,
-  Sparkles,
   X,
-  Bell
+  Bell,
+  CheckCircle2
 } from 'lucide-react';
 
 interface LiveRadarProps {
   matches: Match[];
-  columns: Column[];
+  simulator: ReturnType<typeof useLiveSimulator>;
 }
 
-export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, columns }) => {
+export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
   const {
     isLiveRunning,
     setIsLiveRunning,
@@ -40,7 +39,7 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, columns }) => {
     resetSimulation,
     fastForwardToFinish,
     dismissGoalToast
-  } = useLiveSimulator(matches, columns);
+  } = simulator;
 
   return (
     <div className="relative">
@@ -225,8 +224,10 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, columns }) => {
                 <div
                   key={m.id}
                   className={`bg-[#0B0F19] border rounded-xl p-3 flex items-center justify-between gap-2 min-h-[58px] transition-all ${
-                    isLive
+                    isFinished
                       ? 'border-emerald-500/40 bg-emerald-950/10'
+                      : isLive
+                      ? 'border-amber-500/40 bg-amber-950/10'
                       : 'border-gray-800'
                   }`}
                 >
@@ -240,7 +241,10 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, columns }) => {
                       </div>
                       <div className="text-[10px] text-gray-400 truncate flex items-center gap-1.5">
                         {isFinished ? (
-                          <span className="text-gray-400 font-semibold">MS (Bitti)</span>
+                          <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            MS (Bitti: {status.currentOutcome})
+                          </span>
                         ) : isLive ? (
                           <span className="text-emerald-400 font-bold font-mono tabular-nums flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>

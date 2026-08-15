@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { FormulaType, Match } from '../core/types';
-import { Sparkles, SlidersHorizontal, Layers, Search } from 'lucide-react';
+import { FormulaType, LiveMatchStatus, Match } from '../core/types';
+import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame } from 'lucide-react';
 
 interface MatchListProps {
   matches: Match[];
   formulaType: FormulaType;
+  matchStatuses?: LiveMatchStatus[];
   toggleMatchPick: (matchId: number, outcome: '1' | 'X' | '2') => void;
   setSinglePick: (matchId: number, outcome: '1' | 'X' | '2') => void;
   updateMatchPercent: (matchId: number, outcome: '1' | 'X' | '2', value: number) => void;
@@ -14,6 +15,7 @@ interface MatchListProps {
 export const MatchList: React.FC<MatchListProps> = ({
   matches,
   formulaType,
+  matchStatuses,
   toggleMatchPick,
   updateMatchPercent,
   applyPreset
@@ -50,7 +52,7 @@ export const MatchList: React.FC<MatchListProps> = ({
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
-            İstediğiniz maçlara tek, çifte (1-X, X-2, 1-2) veya kapalı (1-X-2) tercih yapabilirsiniz.
+            İstediğiniz maçlara tek, çifte (1-X, X-2, 1-2) veya kapalı (1-X-2) tercih yapabilirsiniz. Biten maç sonuçları anında işaretlenir.
           </p>
         </div>
 
@@ -135,7 +137,7 @@ export const MatchList: React.FC<MatchListProps> = ({
 
       {/* Match Table / List */}
       <div className="space-y-2">
-        {filteredMatches.map((match) => {
+        {filteredMatches.map((match, idx) => {
           const selectedCount = (match.userPicks['1'] ? 1 : 0) + (match.userPicks['X'] ? 1 : 0) + (match.userPicks['2'] ? 1 : 0);
           const pickTypeBadge = selectedCount === 1 ? 'Tek' : selectedCount === 2 ? 'Çifte' : 'Kapalı (3)';
           const badgeColor = selectedCount === 1
@@ -144,10 +146,20 @@ export const MatchList: React.FC<MatchListProps> = ({
             ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
             : 'bg-purple-500/10 text-purple-400 border-purple-500/30';
 
+          const liveStatus = matchStatuses ? matchStatuses[idx] : undefined;
+          const isFinished = liveStatus?.status === 'FINISHED' || (liveStatus?.minute ?? 0) >= 90;
+          const isLive = (liveStatus?.minute ?? 0) > 0 && !isFinished;
+
           return (
             <div
               key={match.id}
-              className="bg-[#0B0F19]/90 border border-gray-800/80 hover:border-gray-700 rounded-xl p-3 sm:p-3.5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 group"
+              className={`bg-[#0B0F19]/90 border rounded-xl p-3 sm:p-3.5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 group ${
+                isFinished
+                  ? 'border-emerald-500/30 bg-emerald-950/5'
+                  : isLive
+                  ? 'border-amber-500/30 bg-amber-950/5'
+                  : 'border-gray-800/80 hover:border-gray-700'
+              }`}
             >
               {/* Match Info Column */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -162,6 +174,19 @@ export const MatchList: React.FC<MatchListProps> = ({
                     <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.2 rounded border shrink-0 ${badgeColor}`}>
                       {pickTypeBadge}
                     </span>
+
+                    {/* Live or Finished Score Badge */}
+                    {isFinished ? (
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono tabular-nums flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>MS: {liveStatus?.homeScore} - {liveStatus?.awayScore} (Bitti: {liveStatus?.currentOutcome})</span>
+                      </span>
+                    ) : isLive ? (
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 font-mono tabular-nums flex items-center gap-1 animate-pulse">
+                        <Flame className="w-3 h-3 text-amber-400" />
+                        <span>{liveStatus?.minute}' Canlı: {liveStatus?.homeScore} - {liveStatus?.awayScore}</span>
+                      </span>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-[10px] sm:text-[11px] text-gray-400 truncate">
                     <span>{match.league}</span>
@@ -212,18 +237,28 @@ export const MatchList: React.FC<MatchListProps> = ({
                   {(['1', 'X', '2'] as const).map(out => {
                     const isSelected = match.userPicks[out];
                     const odd = match.odds[out];
+                    const isWinningOutcome = isFinished && liveStatus?.currentOutcome === out;
 
                     return (
                       <button
                         key={out}
                         onClick={() => toggleMatchPick(match.id, out)}
-                        className={`w-14 sm:w-16 h-11 rounded-xl border font-bold text-xs flex flex-col items-center justify-center transition-all select-none ${
+                        className={`w-14 sm:w-16 h-11 rounded-xl border font-bold text-xs flex flex-col items-center justify-center transition-all select-none relative ${
+                          isWinningOutcome
+                            ? 'ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/30'
+                            : ''
+                        } ${
                           isSelected
                             ? 'bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-500/20'
                             : 'bg-gray-900/90 text-gray-300 border-gray-800 hover:border-gray-700 hover:bg-gray-800 active:scale-95'
                         }`}
                       >
-                        <span className="font-extrabold text-xs leading-none">{out}</span>
+                        <div className="flex items-center gap-0.5">
+                          <span className="font-extrabold text-xs leading-none">{out}</span>
+                          {isWinningOutcome && (
+                            <span className="text-[9px] text-emerald-200">✓</span>
+                          )}
+                        </div>
                         <span className={`text-[9px] font-mono tabular-nums mt-0.5 ${isSelected ? 'text-emerald-100' : 'text-gray-500'}`}>
                           {odd.toFixed(2)}
                         </span>

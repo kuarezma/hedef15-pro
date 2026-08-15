@@ -12,6 +12,7 @@ import { SyndicateShareModal } from './components/SyndicateShareModal';
 import { AutoPlayModal } from './components/AutoPlayModal';
 import { StatsModal } from './components/StatsModal';
 import { useTotoEngine } from './hooks/useTotoEngine';
+import { useLiveSimulator } from './hooks/useLiveSimulator';
 import { Column, Outcome, SavedCoupon } from './core/types';
 
 export function App() {
@@ -42,6 +43,9 @@ export function App() {
     isCalculating,
     runCalculation
   } = useTotoEngine();
+
+  // Unified Live Simulator & Mackolik Engine
+  const liveSimulator = useLiveSimulator(matches, generatedColumns);
 
   const handleApplyValueSelections = (selections: { matchId: number; outcome: Outcome }[]) => {
     setMatches(prev => prev.map(m => {
@@ -115,6 +119,7 @@ export function App() {
             <MatchList
               matches={matches}
               formulaType={formulaType}
+              matchStatuses={liveSimulator.matchStatuses}
               toggleMatchPick={toggleMatchPick}
               setSinglePick={setSinglePick}
               updateMatchPercent={updateMatchPercent}
@@ -170,6 +175,7 @@ export function App() {
               currentCostTL={calcSummary.totalCostTL}
               onLoadCouponIntoEditor={handleLoadCouponIntoEditor}
               onOpenAutoPlayWithColumns={handleOpenAutoPlayWithColumns}
+              liveOutcomes={liveSimulator.currentOutcomes}
             />
           </div>
         )}
@@ -203,7 +209,10 @@ export function App() {
         {/* Tab 6: Canlı Maç Radarı */}
         {activeTab === 'live' && (
           <div className="space-y-6">
-            <LiveRadar matches={matches} columns={generatedColumns} />
+            <LiveRadar
+              matches={matches}
+              simulator={liveSimulator}
+            />
           </div>
         )}
 
