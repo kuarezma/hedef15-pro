@@ -1,7 +1,7 @@
 import React from 'react';
-import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText } from 'lucide-react';
+import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText, Flame } from 'lucide-react';
 
-export type ActiveTab = 'coupon' | 'filters' | 'my_coupons' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
+export type ActiveTab = 'coupon' | 'filters' | 'my_coupons' | 'tribun' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -24,9 +24,10 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'coupon', label: 'Kupon & Formül', icon: Target },
     { id: 'filters', label: 'Akıllı Filtreler', icon: Zap },
     { id: 'my_coupons', label: 'Kuponlarım & Yükle', icon: FileText },
+    { id: 'tribun', label: 'Nesine Tribün', icon: Flame },
     { id: 'ai_radar', label: 'AI Değer Radarı', icon: TrendingUp },
     { id: 'prize', label: 'İkramiye Havuzu', icon: DollarSign },
-    { id: 'live', label: 'Canlı Maç Radarı', icon: Radio },
+    { id: 'live', label: 'Canlı Skor Radarı', icon: Radio },
     { id: 'syndicate', label: 'Ortak Kupon', icon: Users },
   ];
 
@@ -53,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
                   PRO
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-gray-400 truncate mt-0.5">Akıllı Spor Toto Platformu</p>
+              <p className="text-[10px] sm:text-[11px] text-gray-400 truncate mt-0.5">Nesine • Mackolik • Spor Toto Hibrit</p>
             </div>
           </div>
 

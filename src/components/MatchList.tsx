@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { FormulaType, LiveMatchStatus, Match } from '../core/types';
-import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame, BarChart2 } from 'lucide-react';
 
 interface MatchListProps {
   matches: Match[];
   formulaType: FormulaType;
   matchStatuses?: LiveMatchStatus[];
+  onSelectMatchForDetail?: (match: Match) => void;
   toggleMatchPick: (matchId: number, outcome: '1' | 'X' | '2') => void;
   setSinglePick: (matchId: number, outcome: '1' | 'X' | '2') => void;
   updateMatchPercent: (matchId: number, outcome: '1' | 'X' | '2', value: number) => void;
@@ -16,6 +17,7 @@ export const MatchList: React.FC<MatchListProps> = ({
   matches,
   formulaType,
   matchStatuses,
+  onSelectMatchForDetail,
   toggleMatchPick,
   updateMatchPercent,
   applyPreset
@@ -52,7 +54,7 @@ export const MatchList: React.FC<MatchListProps> = ({
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
-            İstediğiniz maçlara tek, çifte (1-X, X-2, 1-2) veya kapalı (1-X-2) tercih yapabilirsiniz. Biten maç sonuçları anında işaretlenir.
+            İstediğiniz maça tıklayarak Mackolik maç merkezini (H2H, puan durumu, sakatlar) inceleyebilir ve tek/çifte/kapalı tercih yapabilirsiniz.
           </p>
         </div>
 
@@ -161,14 +163,18 @@ export const MatchList: React.FC<MatchListProps> = ({
                   : 'border-gray-800/80 hover:border-gray-700'
               }`}
             >
-              {/* Match Info Column */}
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+              {/* Match Info Column - Clickable for Mackolik Match Center */}
+              <div
+                onClick={() => onSelectMatchForDetail && onSelectMatchForDetail(match)}
+                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                title="Maç merkezini ve detaylı analizleri açmak için tıklayın"
+              >
                 <div className="w-7 h-7 rounded-lg bg-gray-800 group-hover:bg-gray-700 flex items-center justify-center font-black text-xs text-gray-300 border border-gray-700 shrink-0 font-mono tabular-nums">
                   {match.order}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs sm:text-sm font-bold text-white tracking-wide truncate">
+                    <span className="text-xs sm:text-sm font-bold text-white tracking-wide truncate group-hover:text-emerald-400 transition-colors">
                       {match.homeTeam} - {match.awayTeam}
                     </span>
                     <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.2 rounded border shrink-0 ${badgeColor}`}>
@@ -192,6 +198,9 @@ export const MatchList: React.FC<MatchListProps> = ({
                     <span>{match.league}</span>
                     <span>•</span>
                     <span>{match.matchDate} {match.matchTime}</span>
+                    <span className="text-emerald-400/80 font-semibold flex items-center gap-0.5 ml-1">
+                      <BarChart2 className="w-3 h-3" /> Maç Merkezi
+                    </span>
                   </div>
                 </div>
               </div>

@@ -5,6 +5,8 @@ import { MatchList } from './components/MatchList';
 import { FilterPanel } from './components/FilterPanel';
 import { ColumnViewer } from './components/ColumnViewer';
 import { MyCoupons } from './components/MyCoupons';
+import { TribunCommunity } from './components/TribunCommunity';
+import { MatchDetailModal } from './components/MatchDetailModal';
 import { AIValueRadar } from './components/AIValueRadar';
 import { PrizeCalculator } from './components/PrizeCalculator';
 import { LiveRadar } from './components/LiveRadar';
@@ -13,13 +15,14 @@ import { AutoPlayModal } from './components/AutoPlayModal';
 import { StatsModal } from './components/StatsModal';
 import { useTotoEngine } from './hooks/useTotoEngine';
 import { useLiveSimulator } from './hooks/useLiveSimulator';
-import { Column, Outcome, SavedCoupon } from './core/types';
+import { Column, Match, Outcome, SavedCoupon } from './core/types';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('coupon');
   const [isAutoPlayOpen, setIsAutoPlayOpen] = useState<boolean>(false);
   const [autoPlayColumns, setAutoPlayColumns] = useState<Column[]>([]);
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
+  const [selectedMatchForDetail, setSelectedMatchForDetail] = useState<Match | null>(null);
 
   const {
     matches,
@@ -63,6 +66,28 @@ export function App() {
       return m;
     }));
     setActiveTab('coupon');
+  };
+
+  const handleApplyModalPick = (pick: Outcome | '1-X' | 'X-2' | '1-2' | '1-X-2') => {
+    if (!selectedMatchForDetail) return;
+    const matchId = selectedMatchForDetail.id;
+
+    setMatches(prev => prev.map(m => {
+      if (m.id !== matchId) return m;
+
+      let newPicks = { '1': false, 'X': false, '2': false };
+      if (pick === '1') newPicks['1'] = true;
+      else if (pick === 'X') newPicks['X'] = true;
+      else if (pick === '2') newPicks['2'] = true;
+      else if (pick === '1-X') { newPicks['1'] = true; newPicks['X'] = true; }
+      else if (pick === 'X-2') { newPicks['X'] = true; newPicks['2'] = true; }
+      else if (pick === '1-2') { newPicks['1'] = true; newPicks['2'] = true; }
+      else if (pick === '1-X-2') { newPicks['1'] = true; newPicks['X'] = true; newPicks['2'] = true; }
+
+      return { ...m, userPicks: newPicks };
+    }));
+
+    setSelectedMatchForDetail(null);
   };
 
   const handleLoadCouponIntoEditor = (coupon: SavedCoupon) => {
@@ -120,6 +145,7 @@ export function App() {
               matches={matches}
               formulaType={formulaType}
               matchStatuses={liveSimulator.matchStatuses}
+              onSelectMatchForDetail={(m) => setSelectedMatchForDetail(m)}
               toggleMatchPick={toggleMatchPick}
               setSinglePick={setSinglePick}
               updateMatchPercent={updateMatchPercent}
@@ -180,7 +206,17 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 4: AI Değer Radarı */}
+        {/* Tab 4: Nesine Tribün & Popüler Kuponlar */}
+        {activeTab === 'tribun' && (
+          <div className="space-y-6">
+            <TribunCommunity
+              onLoadCouponIntoEditor={handleLoadCouponIntoEditor}
+              onOpenAutoPlayWithColumns={handleOpenAutoPlayWithColumns}
+            />
+          </div>
+        )}
+
+        {/* Tab 5: AI Değer Radarı */}
         {activeTab === 'ai_radar' && (
           <div className="space-y-6">
             <AIValueRadar
@@ -199,14 +235,14 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 5: İkramiye Havuzu */}
+        {/* Tab 6: İkramiye Havuzu */}
         {activeTab === 'prize' && (
           <div className="space-y-6">
             <PrizeCalculator matches={matches} />
           </div>
         )}
 
-        {/* Tab 6: Canlı Maç Radarı */}
+        {/* Tab 7: Canlı Maç Radarı */}
         {activeTab === 'live' && (
           <div className="space-y-6">
             <LiveRadar
@@ -216,7 +252,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 7: Ortak Kupon (Havuz) */}
+        {/* Tab 8: Ortak Kupon (Havuz) */}
         {activeTab === 'syndicate' && (
           <div className="space-y-6">
             <SyndicateShareModal
@@ -226,6 +262,15 @@ export function App() {
           </div>
         )}
       </main>
+
+      {/* Mackolik Match Center Detail Modal */}
+      {selectedMatchForDetail && (
+        <MatchDetailModal
+          match={selectedMatchForDetail}
+          onClose={() => setSelectedMatchForDetail(null)}
+          onApplyPick={handleApplyModalPick}
+        />
+      )}
 
       {/* Global Modals */}
       <AutoPlayModal
@@ -243,9 +288,9 @@ export function App() {
       <footer className="border-t border-gray-800 bg-[#070A12] py-8 text-center text-xs text-gray-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-white tracking-wider">HEDEF15 PRO</span>
+            <span className="font-extrabold text-white tracking-wider">HEDEF15 PRO ENTERPRISE</span>
             <span>•</span>
-            <span>Yapay Zeka & Kombinatoryal Spor Toto Platformu</span>
+            <span>Nesine, Mackolik ve Spor Toto'nun Güçlü Hibriti</span>
           </div>
           <div className="text-gray-400">
             Nesine, Misli, Bilyoner, Tuttur ile tam uyumlu Extra1X2 formatı
