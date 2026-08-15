@@ -1,6 +1,5 @@
-import { Column, GuaranteeTier, Outcome } from './types';
+import { Column, GuaranteeTier } from './types';
 import { countMatches, hammingDistance } from './combinatorics';
-import { MATRIX_4_TRIPLES_9_COLS, MATRIX_5_TRIPLES_27_COLS, MATRIX_7_DOUBLES_16_COLS } from './matrixTables';
 
 /**
  * High Performance Combinatorial Set Covering & Reduction Engine.

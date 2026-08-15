@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Match, FormulaType, GuaranteeTier, FilterConfig, Column, ReductionSummary } from '../core/types';
 import { INITIAL_MATCHES, INITIAL_FILTERS } from '../data/sampleBulletin';
-import { calculateRawCombinationCount, generateCartesianProduct } from '../core/combinatorics';
-import { filterColumns } from '../core/filters';
-import { reduceColumnsByGuarantee, calculateCoverageStats } from '../core/reduction';
-import { generateProbabilisticColumns } from '../core/probabilistic';
+import { generateCartesianProduct } from '../core/combinatorics';
+import { calculateCoverageStats } from '../core/reduction';
+import { runFormulaEngine } from '../core/formulaEngine';
 
 const STORAGE_KEY_MATCHES = 'hedef15_matches_v1';
 const STORAGE_KEY_FILTERS = 'hedef15_filters_v1';
@@ -12,7 +11,12 @@ const STORAGE_KEY_FORMULA = 'hedef15_formula_v1';
 const STORAGE_KEY_TIER = 'hedef15_tier_v1';
 const STORAGE_KEY_BUDGET = 'hedef15_budget_v1';
 
+const CALC_DEBOUNCE_MS = 300;
+
 export function useTotoEngine() {
+  const calcGenerationRef = useRef(0);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Load initial state with LocalStorage fallback
   const [matches, setMatches] = useState<Match[]>(() => {
     try {
@@ -173,6 +177,9 @@ export function useTotoEngine() {
             '2': sorted[0].out === '2' || sorted[1].out === '2'
           }
         };
+      } else if (presetName === 'CLEAR_ALL') {
+        const initial = INITIAL_MATCHES.find(im => im.id === m.id);
+        return initial ? { ...m, userPicks: { ...initial.userPicks } } : m;
       } else if (presetName === 'DOUBLE_SURPRISE') {
         return {
           ...m,
@@ -189,43 +196,32 @@ export function useTotoEngine() {
     }));
   }, []);
 
-  // Compute and run reduction engine smoothly (non-blocking with micro-delay for smooth rendering)
+  // Non-blocking calculation with generation token for cancellation
   const runCalculation = useCallback(() => {
+    const generation = ++calcGenerationRef.current;
     setIsCalculating(true);
 
-    // Use requestAnimationFrame / setTimeout to keep UI responsive
-    setTimeout(() => {
+    requestAnimationFrame(() => {
+      if (generation !== calcGenerationRef.current) return;
+
       const start = performance.now();
 
       try {
-        let finalCols: Column[] = [];
-        let rawCount = 0;
-        let filteredCount = 0;
+        const { columns: finalCols, rawCount, filteredCount } = runFormulaEngine(
+          matches,
+          formulaType,
+          guaranteeTier,
+          filters,
+          targetBudgetTL,
+          unitPriceTL
+        );
 
-        if (formulaType === 'probabilistic') {
-          const targetCols = Math.max(1, Math.floor(targetBudgetTL / unitPriceTL));
-          rawCount = targetCols * 5;
-          finalCols = generateProbabilisticColumns(matches, targetCols, filters);
-          filteredCount = finalCols.length;
-        } else if (formulaType === 'flat') {
-          rawCount = calculateRawCombinationCount(matches);
-          const rawUniverse = generateCartesianProduct(matches, 60000);
-          finalCols = filterColumns(rawUniverse, matches, filters);
-          filteredCount = finalCols.length;
-        } else {
-          rawCount = calculateRawCombinationCount(matches);
-          const rawUniverse = generateCartesianProduct(matches, 100000);
-          const filteredUniverse = filterColumns(rawUniverse, matches, filters);
-          filteredCount = filteredUniverse.length;
-
-          const targetCols = Math.floor(targetBudgetTL / unitPriceTL);
-          finalCols = reduceColumnsByGuarantee(filteredUniverse, guaranteeTier, targetCols > 0 ? targetCols : undefined);
-        }
+        if (generation !== calcGenerationRef.current) return;
 
         const end = performance.now();
         const duration = Math.max(1, Math.round(end - start));
 
-        const coverageStats = formulaType === 'flat'
+        const coverageStats = formulaType === 'flat' || formulaType === 'nine_columns' || formulaType === 'super_seven'
           ? { '15': 100, '14': 100, '13': 100, '12': 100 }
           : calculateCoverageStats(finalCols, generateCartesianProduct(matches, 2000));
 
@@ -240,17 +236,34 @@ export function useTotoEngine() {
           durationMs: duration
         });
       } catch (err) {
-        console.error('Toto Engine Calculation Error:', err);
+        if (generation === calcGenerationRef.current) {
+          console.error('Toto Engine Calculation Error:', err);
+        }
       } finally {
-        setIsCalculating(false);
+        if (generation === calcGenerationRef.current) {
+          setIsCalculating(false);
+        }
       }
-    }, 10);
+    });
   }, [matches, formulaType, guaranteeTier, filters, targetBudgetTL, unitPriceTL]);
 
-  // Initial calculation on dependency change
+  // Debounced recalculation — prevents UI freeze during slider drags / rapid toggles
   useEffect(() => {
-    runCalculation();
-  }, [formulaType, guaranteeTier, targetBudgetTL, unitPriceTL, matches, filters]);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      runCalculation();
+    }, CALC_DEBOUNCE_MS);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      calcGenerationRef.current++;
+    };
+  }, [formulaType, guaranteeTier, targetBudgetTL, unitPriceTL, matches, filters, runCalculation]);
 
   return {
     matches,

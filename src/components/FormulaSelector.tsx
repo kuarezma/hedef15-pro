@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormulaType, GuaranteeTier } from '../core/types';
-import { ShieldCheck, Percent, Layers, Sparkles, Grid, Sliders, DollarSign } from 'lucide-react';
+import { ShieldCheck, Percent, Layers, Sparkles, Grid, Sliders, DollarSign, Loader2, RefreshCw } from 'lucide-react';
 
 interface FormulaSelectorProps {
   formulaType: FormulaType;
@@ -23,7 +23,9 @@ export const FormulaSelector: React.FC<FormulaSelectorProps> = ({
   targetBudgetTL,
   setTargetBudgetTL,
   unitPriceTL,
-  setUnitPriceTL
+  setUnitPriceTL,
+  onRecalculate,
+  isCalculating
 }) => {
   const formulas = [
     {
@@ -94,7 +96,22 @@ export const FormulaSelector: React.FC<FormulaSelectorProps> = ({
         </div>
 
         {/* Target Budget & Unit Price Controls */}
-        <div className="flex items-center gap-3 bg-[#0B0F19] px-3 py-1.5 rounded-xl border border-gray-800 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={onRecalculate}
+            disabled={isCalculating}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed text-gray-200 rounded-xl border border-gray-700 text-xs font-semibold transition-colors shrink-0"
+            title="Kolonları yeniden hesapla"
+          >
+            {isCalculating ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400 shrink-0" />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            )}
+            <span className="whitespace-nowrap">{isCalculating ? 'Hesaplanıyor…' : 'Yeniden Hesapla'}</span>
+          </button>
+
+          <div className="flex items-center gap-3 bg-[#0B0F19] px-3 py-1.5 rounded-xl border border-gray-800 shrink-0">
           <div className="flex items-center gap-1.5">
             <DollarSign className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <label className="text-xs text-gray-400 font-medium whitespace-nowrap">Bütçe:</label>
@@ -124,6 +141,7 @@ export const FormulaSelector: React.FC<FormulaSelectorProps> = ({
               className="w-12 bg-gray-900 border border-gray-700 focus:border-emerald-500 rounded px-1.5 py-0.5 text-xs font-bold font-mono tabular-nums text-white text-right focus:outline-none"
             />
             <span className="text-xs text-gray-500">TL</span>
+          </div>
           </div>
         </div>
       </div>
