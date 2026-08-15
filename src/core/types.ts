@@ -177,3 +177,16 @@ export interface SyndicateShare {
   totalCostTL: number;
   shareUrl?: string;
 }
+
+export interface SavedCoupon {
+  id: string;
+  name: string;
+  createdAt: string;
+  formulaType: FormulaType;
+  guaranteeTier: GuaranteeTier;
+  columnCount: number;
+  totalCostTL: number;
+  columns: Column[];
+  matches: Match[];
+  notes?: string;
+}

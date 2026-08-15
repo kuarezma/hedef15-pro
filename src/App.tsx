@@ -4,6 +4,7 @@ import { FormulaSelector } from './components/FormulaSelector';
 import { MatchList } from './components/MatchList';
 import { FilterPanel } from './components/FilterPanel';
 import { ColumnViewer } from './components/ColumnViewer';
+import { MyCoupons } from './components/MyCoupons';
 import { AIValueRadar } from './components/AIValueRadar';
 import { PrizeCalculator } from './components/PrizeCalculator';
 import { LiveRadar } from './components/LiveRadar';
@@ -11,11 +12,12 @@ import { SyndicateShareModal } from './components/SyndicateShareModal';
 import { AutoPlayModal } from './components/AutoPlayModal';
 import { StatsModal } from './components/StatsModal';
 import { useTotoEngine } from './hooks/useTotoEngine';
-import { Outcome } from './core/types';
+import { Column, Outcome, SavedCoupon } from './core/types';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('coupon');
   const [isAutoPlayOpen, setIsAutoPlayOpen] = useState<boolean>(false);
+  const [autoPlayColumns, setAutoPlayColumns] = useState<Column[]>([]);
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
 
   const {
@@ -59,6 +61,24 @@ export function App() {
     setActiveTab('coupon');
   };
 
+  const handleLoadCouponIntoEditor = (coupon: SavedCoupon) => {
+    if (coupon.matches && coupon.matches.length === 15) {
+      setMatches(coupon.matches);
+    }
+    setFormulaType(coupon.formulaType);
+    if (coupon.guaranteeTier) {
+      setGuaranteeTier(coupon.guaranteeTier);
+    }
+    setActiveTab('coupon');
+  };
+
+  const handleOpenAutoPlayWithColumns = (cols: Column[]) => {
+    setAutoPlayColumns(cols);
+    setIsAutoPlayOpen(true);
+  };
+
+  const currentAutoPlayCols = autoPlayColumns.length > 0 ? autoPlayColumns : generatedColumns;
+
   return (
     <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
       {/* Navigation Header */}
@@ -67,7 +87,10 @@ export function App() {
         setActiveTab={setActiveTab}
         columnCount={generatedColumns.length}
         totalCostTL={calcSummary.totalCostTL}
-        onOpenAutoPlay={() => setIsAutoPlayOpen(true)}
+        onOpenAutoPlay={() => {
+          setAutoPlayColumns(generatedColumns);
+          setIsAutoPlayOpen(true);
+        }}
         onOpenStats={() => setIsStatsOpen(true)}
       />
 
@@ -108,7 +131,10 @@ export function App() {
               columns={generatedColumns}
               matches={matches}
               summary={calcSummary}
-              onOpenAutoPlay={() => setIsAutoPlayOpen(true)}
+              onOpenAutoPlay={() => {
+                setAutoPlayColumns(generatedColumns);
+                setIsAutoPlayOpen(true);
+              }}
             />
           </div>
         )}
@@ -125,12 +151,30 @@ export function App() {
               columns={generatedColumns}
               matches={matches}
               summary={calcSummary}
-              onOpenAutoPlay={() => setIsAutoPlayOpen(true)}
+              onOpenAutoPlay={() => {
+                setAutoPlayColumns(generatedColumns);
+                setIsAutoPlayOpen(true);
+              }}
             />
           </div>
         )}
 
-        {/* Tab 3: AI Değer Radarı */}
+        {/* Tab 3: Kuponlarım & Kupon Yükle */}
+        {activeTab === 'my_coupons' && (
+          <div className="space-y-6">
+            <MyCoupons
+              currentColumns={generatedColumns}
+              currentMatches={matches}
+              currentFormulaType={formulaType}
+              currentGuaranteeTier={guaranteeTier}
+              currentCostTL={calcSummary.totalCostTL}
+              onLoadCouponIntoEditor={handleLoadCouponIntoEditor}
+              onOpenAutoPlayWithColumns={handleOpenAutoPlayWithColumns}
+            />
+          </div>
+        )}
+
+        {/* Tab 4: AI Değer Radarı */}
         {activeTab === 'ai_radar' && (
           <div className="space-y-6">
             <AIValueRadar
@@ -141,26 +185,29 @@ export function App() {
               columns={generatedColumns}
               matches={matches}
               summary={calcSummary}
-              onOpenAutoPlay={() => setIsAutoPlayOpen(true)}
+              onOpenAutoPlay={() => {
+                setAutoPlayColumns(generatedColumns);
+                setIsAutoPlayOpen(true);
+              }}
             />
           </div>
         )}
 
-        {/* Tab 4: İkramiye Havuzu */}
+        {/* Tab 5: İkramiye Havuzu */}
         {activeTab === 'prize' && (
           <div className="space-y-6">
             <PrizeCalculator matches={matches} />
           </div>
         )}
 
-        {/* Tab 5: Canlı Maç Radarı */}
+        {/* Tab 6: Canlı Maç Radarı */}
         {activeTab === 'live' && (
           <div className="space-y-6">
             <LiveRadar matches={matches} columns={generatedColumns} />
           </div>
         )}
 
-        {/* Tab 6: Ortak Kupon (Havuz) */}
+        {/* Tab 7: Ortak Kupon (Havuz) */}
         {activeTab === 'syndicate' && (
           <div className="space-y-6">
             <SyndicateShareModal
@@ -175,7 +222,7 @@ export function App() {
       <AutoPlayModal
         isOpen={isAutoPlayOpen}
         onClose={() => setIsAutoPlayOpen(false)}
-        columns={generatedColumns}
+        columns={currentAutoPlayCols}
       />
 
       <StatsModal

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles } from 'lucide-react';
+import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText } from 'lucide-react';
 
-export type ActiveTab = 'coupon' | 'filters' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
+export type ActiveTab = 'coupon' | 'filters' | 'my_coupons' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -23,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   const tabs = [
     { id: 'coupon', label: 'Kupon & Formül', icon: Target },
     { id: 'filters', label: 'Akıllı Filtreler', icon: Zap },
+    { id: 'my_coupons', label: 'Kuponlarım & Yükle', icon: FileText },
     { id: 'ai_radar', label: 'AI Değer Radarı', icon: TrendingUp },
     { id: 'prize', label: 'İkramiye Havuzu', icon: DollarSign },
     { id: 'live', label: 'Canlı Maç Radarı', icon: Radio },
@@ -80,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Action Widgets */}
           <div className="flex items-center space-x-2 shrink-0">
-            {/* Quick Stat Pill with tabular numbers to prevent jitter */}
+            {/* Quick Stat Pill with tabular numbers */}
             <div className="hidden sm:flex flex-col items-end px-3 py-1 bg-gray-900/80 border border-gray-800 rounded-lg min-w-[130px]">
               <span className="text-[10px] text-gray-400 font-medium">Toplam Kolon / Tutar</span>
               <div className="flex items-center gap-1.5 text-xs font-bold font-mono tabular-nums">
