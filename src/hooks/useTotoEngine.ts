@@ -1,19 +1,15 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Match, FormulaType, GuaranteeTier, FilterConfig, Column, ReductionSummary } from '../core/types';
 import { INITIAL_MATCHES, INITIAL_FILTERS } from '../data/sampleBulletin';
-import { calculateRawCombinationCount, generateCartesianProduct } from '../core/combinatorics';
-import { filterColumns } from '../core/filters';
-import { reduceColumnsByGuarantee, calculateCoverageStats } from '../core/reduction';
-import { generateProbabilisticColumns } from '../core/probabilistic';
+import { WorkerCalcPayload, WorkerCalcResponse } from '../workers/totoWorker';
 
-const STORAGE_KEY_MATCHES = 'hedef15_matches_v1';
-const STORAGE_KEY_FILTERS = 'hedef15_filters_v1';
-const STORAGE_KEY_FORMULA = 'hedef15_formula_v1';
-const STORAGE_KEY_TIER = 'hedef15_tier_v1';
-const STORAGE_KEY_BUDGET = 'hedef15_budget_v1';
+const STORAGE_KEY_MATCHES = 'hedef15_matches_v2';
+const STORAGE_KEY_FILTERS = 'hedef15_filters_v2';
+const STORAGE_KEY_FORMULA = 'hedef15_formula_v2';
+const STORAGE_KEY_TIER = 'hedef15_tier_v2';
+const STORAGE_KEY_BUDGET = 'hedef15_budget_v2';
 
 export function useTotoEngine() {
-  // Load initial state with LocalStorage fallback
   const [matches, setMatches] = useState<Match[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_MATCHES);
@@ -70,38 +66,79 @@ export function useTotoEngine() {
     durationMs: 0
   });
 
-  // Save changes to localStorage
+  // Dedicated Web Worker reference
+  const workerRef = useRef<Worker | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Initialize Web Worker
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('../workers/totoWorker.ts', import.meta.url), {
+      type: 'module'
+    });
+
+    workerRef.current.onmessage = (e: MessageEvent<WorkerCalcResponse>) => {
+      const { finalCols, summary } = e.data;
+      setGeneratedColumns(finalCols);
+      setCalcSummary(summary);
+      setIsCalculating(false);
+    };
+
+    workerRef.current.onerror = (err) => {
+      console.error('Toto Worker Error:', err);
+      setIsCalculating(false);
+    };
+
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+    };
+  }, []);
+
+  // Sync to LocalStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_MATCHES, JSON.stringify(matches));
-    } catch (_) {}
-  }, [matches]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem(STORAGE_KEY_FILTERS, JSON.stringify(filters));
-    } catch (_) {}
-  }, [filters]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem(STORAGE_KEY_FORMULA, formulaType);
-    } catch (_) {}
-  }, [formulaType]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem(STORAGE_KEY_TIER, guaranteeTier);
-    } catch (_) {}
-  }, [guaranteeTier]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem(STORAGE_KEY_BUDGET, targetBudgetTL.toString());
     } catch (_) {}
-  }, [targetBudgetTL]);
+  }, [matches, filters, formulaType, guaranteeTier, targetBudgetTL]);
 
-  // Toggle user pick for a match
+  // Fast background execution trigger
+  const runCalculation = useCallback(() => {
+    if (!workerRef.current) return;
+
+    setIsCalculating(true);
+    const payload: WorkerCalcPayload = {
+      matches,
+      formulaType,
+      guaranteeTier,
+      filters,
+      targetBudgetTL,
+      unitPriceTL
+    };
+
+    workerRef.current.postMessage(payload);
+  }, [matches, formulaType, guaranteeTier, filters, targetBudgetTL, unitPriceTL]);
+
+  // Debounced auto-recalculate on changes (100ms debounce ensures fluid 60-120fps UI)
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      runCalculation();
+    }, 100);
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [matches, formulaType, guaranteeTier, filters, targetBudgetTL, unitPriceTL, runCalculation]);
+
+  // Instant optimistic match selection toggles (0ms latency)
   const toggleMatchPick = useCallback((matchId: number, outcome: '1' | 'X' | '2') => {
     setMatches(prev => prev.map(m => {
       if (m.id !== matchId) return m;
@@ -114,7 +151,6 @@ export function useTotoEngine() {
     }));
   }, []);
 
-  // Set single pick for a match
   const setSinglePick = useCallback((matchId: number, outcome: '1' | 'X' | '2') => {
     setMatches(prev => prev.map(m => {
       if (m.id !== matchId) return m;
@@ -125,7 +161,6 @@ export function useTotoEngine() {
     }));
   }, []);
 
-  // Update custom percentage for probabilistic mode
   const updateMatchPercent = useCallback((matchId: number, outcome: '1' | 'X' | '2', value: number) => {
     setMatches(prev => prev.map(m => {
       if (m.id !== matchId) return m;
@@ -136,16 +171,6 @@ export function useTotoEngine() {
     }));
   }, []);
 
-  // Reset to default bulletin
-  const resetToDefaultBulletin = useCallback(() => {
-    setMatches(INITIAL_MATCHES);
-    setFilters(INITIAL_FILTERS);
-    setFormulaType('guaranteed_custom');
-    setGuaranteeTier('14');
-    setTargetBudgetTL(300);
-  }, []);
-
-  // Quick preset handlers
   const applyPreset = useCallback((presetName: 'ALL_FAVORITES' | 'BALANCED' | 'CLEAR_ALL' | 'DOUBLE_SURPRISE' | 'ALL_1' | 'ALL_X' | 'ALL_2') => {
     setMatches(prev => prev.map(m => {
       if (presetName === 'ALL_FAVORITES') {
@@ -189,69 +214,6 @@ export function useTotoEngine() {
     }));
   }, []);
 
-  // Compute and run reduction engine smoothly (non-blocking with micro-delay for smooth rendering)
-  const runCalculation = useCallback(() => {
-    setIsCalculating(true);
-
-    // Use requestAnimationFrame / setTimeout to keep UI responsive
-    setTimeout(() => {
-      const start = performance.now();
-
-      try {
-        let finalCols: Column[] = [];
-        let rawCount = 0;
-        let filteredCount = 0;
-
-        if (formulaType === 'probabilistic') {
-          const targetCols = Math.max(1, Math.floor(targetBudgetTL / unitPriceTL));
-          rawCount = targetCols * 5;
-          finalCols = generateProbabilisticColumns(matches, targetCols, filters);
-          filteredCount = finalCols.length;
-        } else if (formulaType === 'flat') {
-          rawCount = calculateRawCombinationCount(matches);
-          const rawUniverse = generateCartesianProduct(matches, 60000);
-          finalCols = filterColumns(rawUniverse, matches, filters);
-          filteredCount = finalCols.length;
-        } else {
-          rawCount = calculateRawCombinationCount(matches);
-          const rawUniverse = generateCartesianProduct(matches, 100000);
-          const filteredUniverse = filterColumns(rawUniverse, matches, filters);
-          filteredCount = filteredUniverse.length;
-
-          const targetCols = Math.floor(targetBudgetTL / unitPriceTL);
-          finalCols = reduceColumnsByGuarantee(filteredUniverse, guaranteeTier, targetCols > 0 ? targetCols : undefined);
-        }
-
-        const end = performance.now();
-        const duration = Math.max(1, Math.round(end - start));
-
-        const coverageStats = formulaType === 'flat'
-          ? { '15': 100, '14': 100, '13': 100, '12': 100 }
-          : calculateCoverageStats(finalCols, generateCartesianProduct(matches, 2000));
-
-        setGeneratedColumns(finalCols);
-        setCalcSummary({
-          rawCombinations: rawCount,
-          filteredCombinations: filteredCount,
-          reducedColumns: finalCols.length,
-          totalCostTL: Number((finalCols.length * unitPriceTL).toFixed(2)),
-          unitPriceTL,
-          estimatedGuaranteeRatio: coverageStats,
-          durationMs: duration
-        });
-      } catch (err) {
-        console.error('Toto Engine Calculation Error:', err);
-      } finally {
-        setIsCalculating(false);
-      }
-    }, 10);
-  }, [matches, formulaType, guaranteeTier, filters, targetBudgetTL, unitPriceTL]);
-
-  // Initial calculation on dependency change
-  useEffect(() => {
-    runCalculation();
-  }, [formulaType, guaranteeTier, targetBudgetTL, unitPriceTL, matches, filters]);
-
   return {
     matches,
     setMatches,
@@ -259,7 +221,6 @@ export function useTotoEngine() {
     setSinglePick,
     updateMatchPercent,
     applyPreset,
-    resetToDefaultBulletin,
     formulaType,
     setFormulaType,
     guaranteeTier,
