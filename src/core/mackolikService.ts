@@ -13,7 +13,7 @@ export interface GoalEvent {
 }
 
 /**
- * Normalizes team names for fuzzy match comparison with live feeds
+ * Normalizes team names for comparison
  */
 export function normalizeTeamName(name: string): string {
   return name
@@ -26,8 +26,59 @@ export function normalizeTeamName(name: string): string {
 }
 
 /**
- * Attempts to fetch live scores from public live feeds or Mackolik proxies.
- * Falls back gracefully to intelligent state preservation and simulation.
+ * Returns initial realistic Saturday evening status for current 15 matches:
+ * - Match 1: Galatasaray - Çorum FK (Finished MS: 3 - 0 -> 1)
+ * - Match 2: Kasımpaşa - Trabzonspor (Live 68' -> 1 - 2 -> 2)
+ * - Match 3: Konyaspor - Çaykur Rizespor (Live 68' -> 1 - 1 -> X)
+ * - Matches 4-15: Scheduled for tonight & Sunday/Monday
+ */
+export function getInitialWeekendStatuses(matches: Match[]): LiveMatchStatus[] {
+  return matches.map((m, idx) => {
+    if (idx === 0) {
+      // Galatasaray - Çorum FK (Cuma 21:00 - Bitti)
+      return {
+        matchId: m.id,
+        homeScore: 3,
+        awayScore: 0,
+        minute: 90,
+        status: 'FINISHED',
+        currentOutcome: '1'
+      };
+    } else if (idx === 1) {
+      // Kasımpaşa - Trabzonspor (Cumartesi 19:00 - Canlı)
+      return {
+        matchId: m.id,
+        homeScore: 1,
+        awayScore: 2,
+        minute: 68,
+        status: 'LIVE',
+        currentOutcome: '2'
+      };
+    } else if (idx === 2) {
+      // Konyaspor - Çaykur Rizespor (Cumartesi 19:00 - Canlı)
+      return {
+        matchId: m.id,
+        homeScore: 1,
+        awayScore: 1,
+        minute: 68,
+        status: 'LIVE',
+        currentOutcome: 'X'
+      };
+    } else {
+      return {
+        matchId: m.id,
+        homeScore: 0,
+        awayScore: 0,
+        minute: 0,
+        status: 'SCHEDULED',
+        currentOutcome: 'X'
+      };
+    }
+  });
+}
+
+/**
+ * Simulates Mackolik live scores updates and detects goal events
  */
 export async function fetchLiveScoresFromMackolik(
   currentMatches: Match[],
@@ -36,7 +87,6 @@ export async function fetchLiveScoresFromMackolik(
   const newGoals: GoalEvent[] = [];
   const updatedStatuses: LiveMatchStatus[] = [];
 
-  // Realistic mock live score feed matching current 15 matches with randomized progression
   for (let i = 0; i < currentMatches.length; i++) {
     const match = currentMatches[i];
     const prev = previousStatuses[i] || {
@@ -53,45 +103,42 @@ export async function fetchLiveScoresFromMackolik(
     let minute = prev.minute;
     let status = prev.status;
 
-    // Simulate match progression if live
-    if (status !== 'FINISHED') {
-      const minIncrement = Math.floor(Math.random() * 4 + 2);
-      minute = Math.min(90, minute + minIncrement);
-
-      if (minute > 0) {
-        status = minute >= 90 ? 'FINISHED' : 'LIVE';
-      }
-
-      // Goal probability per tick
-      const goalProbability = 0.12;
-      if (Math.random() < goalProbability && minute < 90) {
-        const isHome = Math.random() < 0.58;
-        if (isHome) {
-          homeScore++;
-          newGoals.push({
-            id: `goal_${match.id}_${Date.now()}_${Math.random()}`,
-            matchId: match.id,
-            homeTeam: match.homeTeam,
-            awayTeam: match.awayTeam,
-            scoringTeam: match.homeTeam,
-            scoringSide: 'home',
-            newScore: `${homeScore} - ${awayScore}`,
-            minute,
-            timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-          });
-        } else {
-          awayScore++;
-          newGoals.push({
-            id: `goal_${match.id}_${Date.now()}_${Math.random()}`,
-            matchId: match.id,
-            homeTeam: match.homeTeam,
-            awayTeam: match.awayTeam,
-            scoringTeam: match.awayTeam,
-            scoringSide: 'away',
-            newScore: `${homeScore} - ${awayScore}`,
-            minute,
-            timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-          });
+    // Advance live matches
+    if (status === 'LIVE') {
+      minute = Math.min(90, minute + Math.floor(Math.random() * 4 + 2));
+      if (minute >= 90) {
+        status = 'FINISHED';
+      } else {
+        // Chance of goal
+        if (Math.random() < 0.15) {
+          const isHome = Math.random() < 0.55;
+          if (isHome) {
+            homeScore++;
+            newGoals.push({
+              id: `goal_${match.id}_${Date.now()}_${Math.random()}`,
+              matchId: match.id,
+              homeTeam: match.homeTeam,
+              awayTeam: match.awayTeam,
+              scoringTeam: match.homeTeam,
+              scoringSide: 'home',
+              newScore: `${homeScore} - ${awayScore}`,
+              minute,
+              timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+            });
+          } else {
+            awayScore++;
+            newGoals.push({
+              id: `goal_${match.id}_${Date.now()}_${Math.random()}`,
+              matchId: match.id,
+              homeTeam: match.homeTeam,
+              awayTeam: match.awayTeam,
+              scoringTeam: match.awayTeam,
+              scoringSide: 'away',
+              newScore: `${homeScore} - ${awayScore}`,
+              minute,
+              timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
         }
       }
     }

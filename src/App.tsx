@@ -72,6 +72,23 @@ export function App() {
     setActiveTab('coupon');
   };
 
+  const handleLockFinishedMatches = () => {
+    setMatches(prev => prev.map((m, idx) => {
+      const status = liveSimulator.matchStatuses[idx];
+      if (status && (status.status === 'FINISHED' || status.minute >= 90)) {
+        return {
+          ...m,
+          userPicks: {
+            '1': status.currentOutcome === '1',
+            'X': status.currentOutcome === 'X',
+            '2': status.currentOutcome === '2'
+          }
+        };
+      }
+      return m;
+    }));
+  };
+
   const handleApplyAIOptimization = ({
     formulaType: newFormula,
     guaranteeTier: newTier,
@@ -177,6 +194,7 @@ export function App() {
               formulaType={formulaType}
               matchStatuses={liveSimulator.matchStatuses}
               onSelectMatchForDetail={(m) => setSelectedMatchForDetail(m)}
+              onLockFinishedMatches={handleLockFinishedMatches}
               toggleMatchPick={toggleMatchPick}
               setSinglePick={setSinglePick}
               updateMatchPercent={updateMatchPercent}

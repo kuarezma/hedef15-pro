@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { FormulaType, LiveMatchStatus, Match } from '../core/types';
-import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame, BarChart2 } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame, BarChart2, Lock, Radio, Clock } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 interface MatchListProps {
   matches: Match[];
   formulaType: FormulaType;
   matchStatuses?: LiveMatchStatus[];
   onSelectMatchForDetail?: (match: Match) => void;
+  onLockFinishedMatches?: () => void;
   toggleMatchPick: (matchId: number, outcome: '1' | 'X' | '2') => void;
   setSinglePick: (matchId: number, outcome: '1' | 'X' | '2') => void;
   updateMatchPercent: (matchId: number, outcome: '1' | 'X' | '2', value: number) => void;
@@ -18,12 +20,14 @@ export const MatchList: React.FC<MatchListProps> = ({
   formulaType,
   matchStatuses,
   onSelectMatchForDetail,
+  onLockFinishedMatches,
   toggleMatchPick,
   updateMatchPercent,
   applyPreset
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
+  const [matchStateFilter, setMatchStateFilter] = useState<'ALL' | 'LIVE' | 'FINISHED' | 'SCHEDULED'>('ALL');
 
   const leagues = useMemo(() => {
     const set = new Set<string>();
@@ -33,17 +37,82 @@ export const MatchList: React.FC<MatchListProps> = ({
     return ['ALL', ...Array.from(set)];
   }, [matches]);
 
+  // Counts of status
+  const counts = useMemo(() => {
+    let finished = 0, live = 0, scheduled = 0;
+    if (matchStatuses) {
+      matchStatuses.forEach(s => {
+        if (s.status === 'FINISHED' || s.minute >= 90) finished++;
+        else if (s.minute > 0) live++;
+        else scheduled++;
+      });
+    }
+    return { finished, live, scheduled };
+  }, [matchStatuses]);
+
   const filteredMatches = useMemo(() => {
-    return matches.filter(m => {
+    return matches.filter((m, idx) => {
       const matchText = `${m.homeTeam} ${m.awayTeam} ${m.league}`.toLowerCase();
       const matchesSearch = searchQuery === '' || matchText.includes(searchQuery.toLowerCase());
       const matchesLeague = selectedLeague === 'ALL' || m.league === selectedLeague;
-      return matchesSearch && matchesLeague;
+
+      const status = matchStatuses ? matchStatuses[idx] : undefined;
+      const isFinished = status?.status === 'FINISHED' || (status?.minute ?? 0) >= 90;
+      const isLive = (status?.minute ?? 0) > 0 && !isFinished;
+      const isScheduled = !isFinished && !isLive;
+
+      let matchesState = true;
+      if (matchStateFilter === 'LIVE') matchesState = isLive;
+      else if (matchStateFilter === 'FINISHED') matchesState = isFinished;
+      else if (matchStateFilter === 'SCHEDULED') matchesState = isScheduled;
+
+      return matchesSearch && matchesLeague && matchesState;
     });
-  }, [matches, searchQuery, selectedLeague]);
+  }, [matches, searchQuery, selectedLeague, matchStateFilter, matchStatuses]);
 
   return (
     <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl backdrop-blur-sm">
+      {/* Live Weekend Status Banner */}
+      <div className="bg-gradient-to-r from-gray-950 via-[#0B0F19] to-gray-950 border border-gray-800 rounded-2xl p-4 mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+            <span className="text-xs font-black uppercase tracking-wider text-white">
+              Haftanın Canlı Durumu:
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-mono tabular-nums flex-wrap">
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {counts.finished} Bitti
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-bold animate-pulse">
+              <Radio className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+              {counts.live} Canlı
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-gray-800 text-gray-400 border border-gray-700 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {counts.scheduled} Başlamadı
+            </span>
+          </div>
+        </div>
+
+        {/* Action Button: Lock Finished Matches */}
+        {counts.finished > 0 && onLockFinishedMatches && (
+          <button
+            onClick={() => {
+              onLockFinishedMatches();
+              confetti({ particleCount: 50, spread: 60 });
+            }}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Biten Maçları Kilitle ({counts.finished})</span>
+          </button>
+        )}
+      </div>
+
       {/* Header with Title & Action Presets */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-800">
         <div>
@@ -105,23 +174,50 @@ export const MatchList: React.FC<MatchListProps> = ({
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
+      {/* State & League Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
-        {/* League Chips */}
+        {/* Status Filter Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {leagues.map(l => (
-            <button
-              key={l}
-              onClick={() => setSelectedLeague(l)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
-                selectedLeague === l
-                  ? 'bg-emerald-500 text-white shadow-sm font-bold'
-                  : 'bg-gray-900 text-gray-400 border border-gray-800 hover:border-gray-700 hover:text-white'
-              }`}
-            >
-              {l === 'ALL' ? 'Tüm Ligler (15)' : l}
-            </button>
-          ))}
+          <button
+            onClick={() => setMatchStateFilter('ALL')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+              matchStateFilter === 'ALL'
+                ? 'bg-emerald-500 text-white shadow-sm font-bold'
+                : 'bg-gray-900 text-gray-400 border border-gray-800 hover:border-gray-700 hover:text-white'
+            }`}
+          >
+            Tüm Maçlar ({matches.length})
+          </button>
+          <button
+            onClick={() => setMatchStateFilter('LIVE')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+              matchStateFilter === 'LIVE'
+                ? 'bg-amber-500 text-white shadow-sm font-bold'
+                : 'bg-gray-900 text-amber-400 border border-gray-800 hover:border-amber-500/40'
+            }`}
+          >
+            🔴 Canlı Oynananlar ({counts.live})
+          </button>
+          <button
+            onClick={() => setMatchStateFilter('FINISHED')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+              matchStateFilter === 'FINISHED'
+                ? 'bg-emerald-500 text-white shadow-sm font-bold'
+                : 'bg-gray-900 text-emerald-400 border border-gray-800 hover:border-emerald-500/40'
+            }`}
+          >
+            ✅ Biten Maçlar ({counts.finished})
+          </button>
+          <button
+            onClick={() => setMatchStateFilter('SCHEDULED')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+              matchStateFilter === 'SCHEDULED'
+                ? 'bg-blue-500 text-white shadow-sm font-bold'
+                : 'bg-gray-900 text-gray-400 border border-gray-800 hover:border-gray-700 hover:text-white'
+            }`}
+          >
+            ⏳ Başlamayanlar ({counts.scheduled})
+          </button>
         </div>
 
         {/* Search Input */}
@@ -139,7 +235,8 @@ export const MatchList: React.FC<MatchListProps> = ({
 
       {/* Match Table / List */}
       <div className="space-y-2">
-        {filteredMatches.map((match, idx) => {
+        {filteredMatches.map((match) => {
+          const matchIndex = matches.findIndex(m => m.id === match.id);
           const selectedCount = (match.userPicks['1'] ? 1 : 0) + (match.userPicks['X'] ? 1 : 0) + (match.userPicks['2'] ? 1 : 0);
           const pickTypeBadge = selectedCount === 1 ? 'Tek' : selectedCount === 2 ? 'Çifte' : 'Kapalı (3)';
           const badgeColor = selectedCount === 1
@@ -148,7 +245,7 @@ export const MatchList: React.FC<MatchListProps> = ({
             ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
             : 'bg-purple-500/10 text-purple-400 border-purple-500/30';
 
-          const liveStatus = matchStatuses ? matchStatuses[idx] : undefined;
+          const liveStatus = matchStatuses ? matchStatuses[matchIndex] : undefined;
           const isFinished = liveStatus?.status === 'FINISHED' || (liveStatus?.minute ?? 0) >= 90;
           const isLive = (liveStatus?.minute ?? 0) > 0 && !isFinished;
 
@@ -157,9 +254,9 @@ export const MatchList: React.FC<MatchListProps> = ({
               key={match.id}
               className={`bg-[#0B0F19]/90 border rounded-xl p-3 sm:p-3.5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 group ${
                 isFinished
-                  ? 'border-emerald-500/30 bg-emerald-950/5'
+                  ? 'border-emerald-500/40 bg-emerald-950/10'
                   : isLive
-                  ? 'border-amber-500/30 bg-amber-950/5'
+                  ? 'border-amber-500/40 bg-amber-950/10 ring-1 ring-amber-500/30'
                   : 'border-gray-800/80 hover:border-gray-700'
               }`}
             >
@@ -169,7 +266,13 @@ export const MatchList: React.FC<MatchListProps> = ({
                 className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
                 title="Maç merkezini ve detaylı analizleri açmak için tıklayın"
               >
-                <div className="w-7 h-7 rounded-lg bg-gray-800 group-hover:bg-gray-700 flex items-center justify-center font-black text-xs text-gray-300 border border-gray-700 shrink-0 font-mono tabular-nums">
+                <div className={`w-7 h-7 rounded-lg font-mono font-black text-xs flex items-center justify-center border shrink-0 tabular-nums ${
+                  isFinished
+                    ? 'bg-emerald-500 text-white border-emerald-400 shadow-sm'
+                    : isLive
+                    ? 'bg-amber-500 text-white border-amber-400 animate-pulse'
+                    : 'bg-gray-800 text-gray-300 border-gray-700'
+                }`}>
                   {match.order}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -184,12 +287,12 @@ export const MatchList: React.FC<MatchListProps> = ({
                     {/* Live or Finished Score Badge */}
                     {isFinished ? (
                       <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono tabular-nums flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         <span>MS: {liveStatus?.homeScore} - {liveStatus?.awayScore} (Bitti: {liveStatus?.currentOutcome})</span>
                       </span>
                     ) : isLive ? (
                       <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 font-mono tabular-nums flex items-center gap-1 animate-pulse">
-                        <Flame className="w-3 h-3 text-amber-400" />
+                        <Flame className="w-3.5 h-3.5 text-amber-400" />
                         <span>{liveStatus?.minute}' Canlı: {liveStatus?.homeScore} - {liveStatus?.awayScore}</span>
                       </span>
                     ) : null}
@@ -221,9 +324,8 @@ export const MatchList: React.FC<MatchListProps> = ({
                 </div>
               </div>
 
-              {/* Selection Buttons or Percentage Inputs with Fixed Dimensions */}
+              {/* Selection Buttons with Visual Winning and Finished Lock Indicators */}
               {formulaType === 'probabilistic' ? (
-                /* Probabilistic Percentage Inputs */
                 <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
                   {(['1', 'X', '2'] as const).map(out => (
                     <div key={out} className="flex items-center gap-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 min-w-[68px]">
@@ -241,12 +343,12 @@ export const MatchList: React.FC<MatchListProps> = ({
                   ))}
                 </div>
               ) : (
-                /* Standard 1, X, 2 Fixed Dimension Toggle Buttons */
                 <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
                   {(['1', 'X', '2'] as const).map(out => {
                     const isSelected = match.userPicks[out];
                     const odd = match.odds[out];
                     const isWinningOutcome = isFinished && liveStatus?.currentOutcome === out;
+                    const isLiveLeading = isLive && liveStatus?.currentOutcome === out;
 
                     return (
                       <button
@@ -255,6 +357,8 @@ export const MatchList: React.FC<MatchListProps> = ({
                         className={`w-14 sm:w-16 h-11 rounded-xl border font-bold text-xs flex flex-col items-center justify-center transition-all select-none relative ${
                           isWinningOutcome
                             ? 'ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/30'
+                            : isLiveLeading
+                            ? 'ring-1 ring-amber-400 shadow-sm'
                             : ''
                         } ${
                           isSelected
@@ -266,6 +370,9 @@ export const MatchList: React.FC<MatchListProps> = ({
                           <span className="font-extrabold text-xs leading-none">{out}</span>
                           {isWinningOutcome && (
                             <span className="text-[9px] text-emerald-200">✓</span>
+                          )}
+                          {isLiveLeading && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
                           )}
                         </div>
                         <span className={`text-[9px] font-mono tabular-nums mt-0.5 ${isSelected ? 'text-emerald-100' : 'text-gray-500'}`}>

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Column, LiveMatchStatus, LiveRadarState, Match, Outcome } from '../core/types';
-import { fetchLiveScoresFromMackolik, GoalEvent } from '../core/mackolikService';
+import { fetchLiveScoresFromMackolik, getInitialWeekendStatuses, GoalEvent } from '../core/mackolikService';
 import { playGoalSound } from '../core/goalAudio';
 
 /** Cap columns evaluated in live radar to keep UI responsive */
@@ -20,20 +20,13 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
   const evaluatedColumns = useMemo(() => sampleColumnsForLiveRadar(columns), [columns]);
   const [isLiveRunning, setIsLiveRunning] = useState<boolean>(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
-  const [autoPollInterval, setAutoPollInterval] = useState<number>(15); // seconds: 15, 30, 60, 0
+  const [autoPollInterval, setAutoPollInterval] = useState<number>(15);
   const [recentGoals, setRecentGoals] = useState<GoalEvent[]>([]);
   const [activeGoalToast, setActiveGoalToast] = useState<GoalEvent | null>(null);
   const [isFetchingLive, setIsFetchingLive] = useState<boolean>(false);
 
   const [matchStatuses, setMatchStatuses] = useState<LiveMatchStatus[]>(() => {
-    return matches.map(m => ({
-      matchId: m.id,
-      homeScore: 0,
-      awayScore: 0,
-      minute: 0,
-      status: 'SCHEDULED' as const,
-      currentOutcome: 'X' as Outcome
-    }));
+    return getInitialWeekendStatuses(matches);
   });
 
   // Calculate live outcomes (1, X, 2)
@@ -68,7 +61,6 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
         }
       }
 
-      // Max possible hits given finished matches
       const potentialMaxHits = 15 - finishedMismatches;
 
       let status: 'ACTIVE_15' | 'ACTIVE_14' | 'ACTIVE_13' | 'ACTIVE_12' | 'LOST' = 'LOST';
@@ -121,12 +113,10 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
         const latestGoal = newGoals[0];
         setActiveGoalToast(latestGoal);
 
-        // Sound alert
         if (isSoundEnabled) {
           playGoalSound();
         }
 
-        // Auto dismiss toast after 6 seconds
         setTimeout(() => {
           setActiveGoalToast(prev => (prev?.id === latestGoal.id ? null : prev));
         }, 6000);
@@ -162,14 +152,7 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     setIsLiveRunning(false);
     setRecentGoals([]);
     setActiveGoalToast(null);
-    setMatchStatuses(matches.map(m => ({
-      matchId: m.id,
-      homeScore: 0,
-      awayScore: 0,
-      minute: 0,
-      status: 'SCHEDULED',
-      currentOutcome: 'X'
-    })));
+    setMatchStatuses(getInitialWeekendStatuses(matches));
   }, [matches]);
 
   return {
