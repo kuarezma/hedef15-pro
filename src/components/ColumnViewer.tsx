@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Column, Match, ReductionSummary } from '../core/types';
-import { exportToCSV, exportToExtra1X2, exportToNesineFormat } from '../core/exporters';
-import { Download, Copy, Check, FileText, Zap, ChevronLeft, ChevronRight, CheckCircle2, Award, Clock } from 'lucide-react';
+import { exportToCSV, exportToExtra1X2 } from '../core/exporters';
+import { Download, Copy, Check, FileText, Zap, ChevronLeft, ChevronRight, Award, Clock, Search, Eye, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface ColumnViewerProps {
@@ -19,10 +19,19 @@ export const ColumnViewer: React.FC<ColumnViewerProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [columnFilterPattern, setColumnFilterPattern] = useState<string>('');
+  const [selectedColumnDetail, setSelectedColumnDetail] = useState<{ col: Column; index: number } | null>(null);
   const pageSize = 50;
 
-  const totalPages = Math.max(1, Math.ceil(columns.length / pageSize));
-  const paginatedColumns = columns.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // Filter columns by user pattern if entered
+  const filteredColumns = useMemo(() => {
+    if (!columnFilterPattern.trim()) return columns;
+    const pattern = columnFilterPattern.toUpperCase().trim();
+    return columns.filter(col => col.join('').includes(pattern));
+  }, [columns, columnFilterPattern]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredColumns.length / pageSize));
+  const paginatedColumns = filteredColumns.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleDownloadExtra1X2 = () => {
     const text = exportToExtra1X2(columns);
@@ -120,17 +129,34 @@ export const ColumnViewer: React.FC<ColumnViewerProps> = ({
         </div>
       </div>
 
-      {/* Action Bar (Export Buttons & Pagination) */}
+      {/* Action Bar & Pattern Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-800">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-white">Kolon Listesi</span>
-          <span className="text-[11px] text-gray-400">({columns.length} Kolon Hazır)</span>
+        <div className="flex items-center gap-3">
+          <div>
+            <span className="text-xs font-bold text-white">Kolon Listesi</span>
+            <span className="text-[11px] text-gray-400 ml-1.5">({columns.length} Kolon)</span>
+          </div>
+
+          {/* Quick Pattern Search */}
+          <div className="relative w-36 sm:w-44">
+            <Search className="w-3 h-3 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Desen ara (Örn: 11X)..."
+              value={columnFilterPattern}
+              onChange={(e) => {
+                setColumnFilterPattern(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-[#0B0F19] border border-gray-800 focus:border-emerald-500 rounded-lg pl-7 pr-2 py-1 text-[11px] font-mono text-white placeholder-gray-500 focus:outline-none"
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleCopyNesine}
-            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5 active:scale-95"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Kopyalandı!' : 'Kolonları Kopyala'}</span>
@@ -138,15 +164,15 @@ export const ColumnViewer: React.FC<ColumnViewerProps> = ({
 
           <button
             onClick={handleDownloadExtra1X2}
-            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5 active:scale-95"
           >
             <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Extra1X2 (.txt) İndir</span>
+            <span>Extra1X2 (.txt)</span>
           </button>
 
           <button
             onClick={handleDownloadCSV}
-            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5 active:scale-95"
           >
             <FileText className="w-3.5 h-3.5 text-blue-400" />
             <span>Excel / CSV</span>
@@ -154,7 +180,7 @@ export const ColumnViewer: React.FC<ColumnViewerProps> = ({
 
           <button
             onClick={onOpenAutoPlay}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5"
+            className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 active:scale-95"
           >
             <Zap className="w-3.5 h-3.5" />
             <span>Otomatik Oyna</span>
@@ -175,11 +201,17 @@ export const ColumnViewer: React.FC<ColumnViewerProps> = ({
               return (
                 <div
                   key={globalIdx}
-                  className="bg-[#0B0F19] border border-gray-800 hover:border-gray-700 rounded-xl p-2.5 flex flex-col justify-between transition-all"
+                  onClick={() => setSelectedColumnDetail({ col, index: globalIdx })}
+                  className="bg-[#0B0F19] border border-gray-800 hover:border-emerald-500/50 hover:bg-gray-900/60 rounded-xl p-2.5 flex flex-col justify-between transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1.5 font-mono">
-                    <span className="font-bold text-gray-400">Kolon #{globalIdx}</span>
-                    <span>15 Maç</span>
+                    <span className="font-bold text-gray-400 group-hover:text-emerald-400 transition-colors">
+                      Kolon #{globalIdx}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Eye className="w-3 h-3 text-gray-500 group-hover:text-white" />
+                      15 Maç
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-5 gap-1 text-center font-mono font-bold text-xs">
@@ -210,20 +242,20 @@ export const ColumnViewer: React.FC<ColumnViewerProps> = ({
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-800 text-xs text-gray-400">
               <div>
-                Sayfa {currentPage} / {totalPages} (Gösterilen: {paginatedColumns.length} / {columns.length})
+                Sayfa {currentPage} / {totalPages} (Gösterilen: {paginatedColumns.length} / {filteredColumns.length})
               </div>
               <div className="flex items-center gap-2">
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-lg bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700 text-white"
+                  className="p-1.5 rounded-lg bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700 text-white active:scale-95"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className="p-1.5 rounded-lg bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700 text-white"
+                  className="p-1.5 rounded-lg bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700 text-white active:scale-95"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -231,6 +263,65 @@ export const ColumnViewer: React.FC<ColumnViewerProps> = ({
             </div>
           )}
         </>
+      )}
+
+      {/* Detailed Column Inspector Modal */}
+      {selectedColumnDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#0B0F19] border border-gray-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Kolon Detayı #{selectedColumnDetail.index}</h3>
+                <p className="text-xs text-gray-400 font-mono mt-0.5">{selectedColumnDetail.col.join('')}</p>
+              </div>
+              <button
+                onClick={() => setSelectedColumnDetail(null)}
+                className="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
+              {selectedColumnDetail.col.map((out, mIdx) => {
+                const match = matches[mIdx];
+                return (
+                  <div key={mIdx} className="bg-gray-900/80 border border-gray-800 rounded-lg p-2 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded bg-gray-800 text-gray-400 font-mono font-bold flex items-center justify-center text-[10px]">
+                        {mIdx + 1}
+                      </span>
+                      <span className="font-semibold text-gray-200">
+                        {match.homeTeam} - {match.awayTeam}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-500 font-mono">Oran: {match.odds[out].toFixed(2)}</span>
+                      <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${
+                        out === '1'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : out === 'X'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                      }`}>
+                        {out}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-3 border-t border-gray-800 bg-gray-900/40 text-right">
+              <button
+                onClick={() => setSelectedColumnDetail(null)}
+                className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-xs font-semibold"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
