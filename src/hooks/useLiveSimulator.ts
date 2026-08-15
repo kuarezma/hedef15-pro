@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Column, LiveMatchStatus, LiveRadarState, Match, Outcome } from '../core/types';
-import { countMatches } from '../core/combinatorics';
 
 /** Cap columns evaluated in live radar to keep UI responsive */
 const MAX_LIVE_RADAR_COLUMNS = 2500;
