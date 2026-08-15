@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={onRefreshBulletin}
                 disabled={isBulletinLoading}
-                title="Bülteni yenile"
+                title={bulletinMeta ? `Bülten: ${bulletinMeta.source}\nGüncelleme: ${new Date(bulletinMeta.updatedAt).toLocaleString('tr-TR')}` : 'Bülteni yenile'}
                 className="p-2 text-gray-400 hover:text-emerald-400 bg-gray-900/80 border border-gray-800 hover:border-gray-700 rounded-xl transition-colors shrink-0 disabled:opacity-50"
               >
                 {isBulletinLoading ? (

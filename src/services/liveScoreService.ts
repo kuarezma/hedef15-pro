@@ -1,10 +1,19 @@
 import { LiveMatchStatus, Outcome } from '../core/types';
 
 const LIVE_URL = '/live/scores.json';
+const REMOTE_LIVE_URL = import.meta.env.VITE_LIVE_SCORES_REMOTE_URL as string | undefined;
+
+function liveUrls(): string[] {
+  const urls: string[] = [];
+  if (REMOTE_LIVE_URL) urls.push(REMOTE_LIVE_URL);
+  urls.push(LIVE_URL);
+  return urls;
+}
 const POLL_INTERVAL_MS = 30_000;
 
 export interface LiveScorePayload {
   updatedAt: string;
+  source?: string;
   matches: {
     matchId: number;
     homeScore: number;
@@ -32,13 +41,17 @@ export function mapPayloadToStatuses(payload: LiveScorePayload): LiveMatchStatus
 }
 
 export async function fetchLiveScores(): Promise<LiveScorePayload | null> {
-  try {
-    const res = await fetch(LIVE_URL, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return (await res.json()) as LiveScorePayload;
-  } catch {
-    return null;
+  for (const url of liveUrls()) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const data = (await res.json()) as LiveScorePayload;
+      return data;
+    } catch {
+      /* try next */
+    }
   }
+  return null;
 }
 
 export function startLiveScorePolling(

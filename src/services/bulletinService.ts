@@ -18,6 +18,28 @@ interface CachedBulletin {
 }
 
 const BULLETIN_URL = '/bulletin/current.json';
+const REMOTE_BULLETIN_URL = import.meta.env.VITE_BULLETIN_REMOTE_URL as string | undefined;
+
+function bulletinUrls(): string[] {
+  const urls: string[] = [];
+  if (REMOTE_BULLETIN_URL) urls.push(REMOTE_BULLETIN_URL);
+  urls.push(BULLETIN_URL);
+  return urls;
+}
+
+async function fetchJsonFromUrls<T>(urls: string[]): Promise<T> {
+  let lastError: unknown;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return (await res.json()) as T;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
 
 function normalizeMatches(raw: Match[]): Match[] {
   if (!Array.isArray(raw) || raw.length !== 15) {
@@ -65,9 +87,7 @@ export async function fetchBulletin(forceRefresh = false): Promise<BulletinPaylo
   }
 
   try {
-    const res = await fetch(BULLETIN_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as BulletinPayload;
+    const data = await fetchJsonFromUrls<BulletinPayload>(bulletinUrls());
     data.matches = normalizeMatches(data.matches);
     writeCache(data);
     return data;
