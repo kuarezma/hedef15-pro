@@ -20,6 +20,7 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
   const evaluatedColumns = useMemo(() => sampleColumnsForLiveRadar(columns), [columns]);
   const [isLiveRunning, setIsLiveRunning] = useState<boolean>(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
+  const [isBrowserNotifEnabled, setIsBrowserNotifEnabled] = useState<boolean>(false);
   const [autoPollInterval, setAutoPollInterval] = useState<number>(15);
   const [recentGoals, setRecentGoals] = useState<GoalEvent[]>([]);
   const [activeGoalToast, setActiveGoalToast] = useState<GoalEvent | null>(null);
@@ -28,6 +29,16 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
   const [matchStatuses, setMatchStatuses] = useState<LiveMatchStatus[]>(() => {
     return getInitialWeekendStatuses(matches);
   });
+
+  // Request browser notification permission
+  const requestBrowserNotificationPermission = useCallback(async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission();
+      setIsBrowserNotifEnabled(perm === 'granted');
+      return perm === 'granted';
+    }
+    return false;
+  }, []);
 
   // Calculate live outcomes (1, X, 2)
   const currentOutcomes: Outcome[] = useMemo(() => {
@@ -113,8 +124,19 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
         const latestGoal = newGoals[0];
         setActiveGoalToast(latestGoal);
 
+        // Sound alert
         if (isSoundEnabled) {
           playGoalSound();
+        }
+
+        // Browser push notification
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(`⚽ GOL! ${latestGoal.scoringTeam}`, {
+              body: `${latestGoal.homeTeam} ${latestGoal.newScore} ${latestGoal.awayTeam} (${latestGoal.minute}')`,
+              icon: './favicon.svg'
+            });
+          } catch (_) {}
         }
 
         setTimeout(() => {
@@ -160,6 +182,8 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     setIsLiveRunning,
     isSoundEnabled,
     setIsSoundEnabled,
+    isBrowserNotifEnabled,
+    requestBrowserNotificationPermission,
     autoPollInterval,
     setAutoPollInterval,
     matchStatuses,

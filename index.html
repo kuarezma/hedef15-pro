@@ -2,8 +2,13 @@
 <html lang="tr" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#10B981" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hedef15 Pro" />
+    <link rel="manifest" href="./manifest.json" />
     <meta name="description" content="Hedef15 Pro - Yeni Nesil Spor Toto Formülleri, İndirgeme Motoru, AI Değer Analizi ve Canlı İkramiye Radarı" />
     <title>Hedef15 Pro 🎯 | Akıllı Spor Toto Formül & Analiz Platformu</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +17,15 @@
   </head>
   <body class="bg-[#0B0F19] text-gray-100 font-sans antialiased selection:bg-emerald-500 selection:text-white min-h-screen">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="./src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch((err) => {
+            console.log('SW registration failed: ', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

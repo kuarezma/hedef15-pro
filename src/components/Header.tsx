@@ -1,7 +1,7 @@
 import React from 'react';
-import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText, Flame, Share2, Trophy } from 'lucide-react';
+import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText, Flame, Share2, Trophy, Dice5, Bot, Download } from 'lucide-react';
 
-export type ActiveTab = 'coupon' | 'filters' | 'results' | 'my_coupons' | 'tribun' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
+export type ActiveTab = 'coupon' | 'results' | 'monte_carlo' | 'ai_chat' | 'filters' | 'my_coupons' | 'tribun' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenAutoPlay: () => void;
   onOpenStats: () => void;
   onOpenShareCard?: () => void;
+  onOpenExportModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,11 +21,14 @@ export const Header: React.FC<HeaderProps> = ({
   totalCostTL,
   onOpenAutoPlay,
   onOpenStats,
-  onOpenShareCard
+  onOpenShareCard,
+  onOpenExportModal
 }) => {
   const tabs = [
     { id: 'coupon', label: 'Kupon & Formül', icon: Target },
     { id: 'results', label: 'Resmi Sonuçlar', icon: Trophy },
+    { id: 'monte_carlo', label: 'Monte Carlo Testi', icon: Dice5 },
+    { id: 'ai_chat', label: 'AI Danışman', icon: Bot },
     { id: 'filters', label: 'Akıllı Filtreler', icon: Zap },
     { id: 'my_coupons', label: 'Kuponlarım & Yükle', icon: FileText },
     { id: 'tribun', label: 'Nesine Tribün', icon: Flame },
@@ -62,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Center Tabs */}
-          <nav className="hidden lg:flex items-center space-x-1 bg-gray-900/80 p-1 rounded-xl border border-gray-800/80 shrink-0">
+          <nav className="hidden xl:flex items-center space-x-1 bg-gray-900/80 p-1 rounded-xl border border-gray-800/80 shrink-0 overflow-x-auto max-w-2xl scrollbar-none">
             {tabs.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -86,8 +90,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Action Widgets */}
           <div className="flex items-center space-x-2 shrink-0">
             {/* Quick Stat Pill with tabular numbers */}
-            <div className="hidden sm:flex flex-col items-end px-3 py-1 bg-gray-900/80 border border-gray-800 rounded-lg min-w-[130px]">
-              <span className="text-[10px] text-gray-400 font-medium">Toplam Kolon / Tutar</span>
+            <div className="hidden sm:flex flex-col items-end px-3 py-1 bg-gray-900/80 border border-gray-800 rounded-lg min-w-[120px]">
+              <span className="text-[10px] text-gray-400 font-medium">Toplam Tutar</span>
               <div className="flex items-center gap-1.5 text-xs font-bold font-mono tabular-nums">
                 <span className="text-emerald-400">{columnCount.toLocaleString()} K</span>
                 <span className="text-gray-600">•</span>
@@ -103,6 +107,17 @@ export const Header: React.FC<HeaderProps> = ({
               <Zap className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Otomatik Oyna</span>
             </button>
+
+            {/* Advanced Export Button */}
+            {onOpenExportModal && (
+              <button
+                onClick={onOpenExportModal}
+                title="Excel, CSV veya Bayi QR Kodu İndir"
+                className="p-2 text-cyan-400 hover:text-white bg-gray-900/80 border border-gray-800 hover:border-cyan-500/40 rounded-xl transition-colors shrink-0"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Share Card Button */}
             {onOpenShareCard && (
@@ -128,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Mobile Tab Scroller */}
-      <div className="lg:hidden flex overflow-x-auto py-2 px-3 border-t border-gray-800/80 gap-1.5 bg-[#0B0F19] scrollbar-none">
+      <div className="xl:hidden flex overflow-x-auto py-2 px-3 border-t border-gray-800/80 gap-1.5 bg-[#0B0F19] scrollbar-none">
         {tabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

@@ -6,6 +6,9 @@ import { FilterPanel } from './components/FilterPanel';
 import { ColumnViewer } from './components/ColumnViewer';
 import { MyCoupons } from './components/MyCoupons';
 import { OfficialResults } from './components/OfficialResults';
+import { MonteCarloSimulator } from './components/MonteCarloSimulator';
+import { AIChatAdvisor } from './components/AIChatAdvisor';
+import { AdvancedExportModal } from './components/AdvancedExportModal';
 import { TribunCommunity } from './components/TribunCommunity';
 import { MatchDetailModal } from './components/MatchDetailModal';
 import { AICouponWizard } from './components/AICouponWizard';
@@ -27,6 +30,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('coupon');
   const [isAutoPlayOpen, setIsAutoPlayOpen] = useState<boolean>(false);
   const [isShareCardOpen, setIsShareCardOpen] = useState<boolean>(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [autoPlayColumns, setAutoPlayColumns] = useState<Column[]>([]);
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
   const [selectedMatchForDetail, setSelectedMatchForDetail] = useState<Match | null>(null);
@@ -98,6 +102,32 @@ export function App() {
       }
       return m;
     }));
+  };
+
+  const handleApplyTacticalPicks = (
+    picks: { matchId: number; outcomes: Outcome[] }[],
+    newFormula?: FormulaType,
+    newTier?: GuaranteeTier
+  ) => {
+    setMatches(prev => prev.map(m => {
+      const found = picks.find(p => p.matchId === m.id);
+      if (found) {
+        return {
+          ...m,
+          userPicks: {
+            '1': found.outcomes.includes('1'),
+            'X': found.outcomes.includes('X'),
+            '2': found.outcomes.includes('2')
+          }
+        };
+      }
+      return m;
+    }));
+
+    if (newFormula) setFormulaType(newFormula);
+    if (newTier) setGuaranteeTier(newTier);
+
+    setActiveTab('coupon');
   };
 
   const handleApplyAIOptimization = ({
@@ -174,6 +204,7 @@ export function App() {
         }}
         onOpenStats={() => setIsStatsOpen(true)}
         onOpenShareCard={() => setIsShareCardOpen(true)}
+        onOpenExportModal={() => setIsExportModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -250,7 +281,37 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 3: Akıllı Filtreler */}
+        {/* Tab 3: Monte Carlo Simülatörü */}
+        {activeTab === 'monte_carlo' && (
+          <div className="space-y-6">
+            <MonteCarloSimulator
+              matches={matches}
+              columns={generatedColumns}
+              unitPriceTL={unitPriceTL}
+            />
+            <ColumnViewer
+              columns={generatedColumns}
+              matches={matches}
+              summary={calcSummary}
+              onOpenAutoPlay={() => {
+                setAutoPlayColumns(generatedColumns);
+                setIsAutoPlayOpen(true);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Tab 4: Spor Toto AI Danışmanı */}
+        {activeTab === 'ai_chat' && (
+          <div className="space-y-6">
+            <AIChatAdvisor
+              matches={matches}
+              onApplyTacticalPicks={handleApplyTacticalPicks}
+            />
+          </div>
+        )}
+
+        {/* Tab 5: Akıllı Filtreler */}
         {activeTab === 'filters' && (
           <div className="space-y-6">
             <FilterPanel
@@ -275,7 +336,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 4: Kuponlarım & Kupon Yükle */}
+        {/* Tab 6: Kuponlarım & Kupon Yükle */}
         {activeTab === 'my_coupons' && (
           <div className="space-y-6">
             <MyCoupons
@@ -291,7 +352,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 5: Nesine Tribün & Popüler Kuponlar */}
+        {/* Tab 7: Nesine Tribün & Popüler Kuponlar */}
         {activeTab === 'tribun' && (
           <div className="space-y-6">
             <TribunCommunity
@@ -301,7 +362,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 6: AI Değer Radarı */}
+        {/* Tab 8: AI Değer Radarı */}
         {activeTab === 'ai_radar' && (
           <div className="space-y-6">
             <AIValueRadar
@@ -320,14 +381,14 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 7: İkramiye Havuzu */}
+        {/* Tab 9: İkramiye Havuzu */}
         {activeTab === 'prize' && (
           <div className="space-y-6">
             <PrizeCalculator matches={matches} />
           </div>
         )}
 
-        {/* Tab 8: Canlı Maç Radarı */}
+        {/* Tab 10: Canlı Maç Radarı */}
         {activeTab === 'live' && (
           <div className="space-y-6">
             <LiveRadar
@@ -337,7 +398,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 9: Ortak Kupon (Havuz) */}
+        {/* Tab 11: Ortak Kupon (Havuz) */}
         {activeTab === 'syndicate' && (
           <div className="space-y-6">
             <SyndicateShareModal
@@ -356,6 +417,17 @@ export function App() {
           onApplyPick={handleApplyModalPick}
         />
       )}
+
+      {/* Advanced Export Modal (Excel, CSV, TXT, QR) */}
+      <AdvancedExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        matches={matches}
+        columns={generatedColumns}
+        formulaType={formulaType}
+        guaranteeTier={guaranteeTier}
+        totalCostTL={calcSummary.totalCostTL}
+      />
 
       {/* Coupon Share & Printable Card Modal */}
       <CouponShareCardModal
@@ -389,7 +461,7 @@ export function App() {
             <span>Nesine, Mackolik ve Spor Toto Hibrit Platformu</span>
           </div>
           <div className="text-gray-400">
-            Nesine, Misli, Bilyoner, Tuttur ile tam uyumlu Extra1X2 formatı
+            PWA Destekli • Çevrimdışı Çalışabilir • Extra1X2 & Excel Uyumlu
           </div>
         </div>
       </footer>
