@@ -3,11 +3,11 @@ import { Match, FormulaType, GuaranteeTier, FilterConfig, Column, ReductionSumma
 import { INITIAL_MATCHES, INITIAL_FILTERS } from '../data/sampleBulletin';
 import { WorkerCalcPayload, WorkerCalcResponse } from '../workers/totoWorker';
 
-const STORAGE_KEY_MATCHES = 'hedef15_matches_v2';
-const STORAGE_KEY_FILTERS = 'hedef15_filters_v2';
-const STORAGE_KEY_FORMULA = 'hedef15_formula_v2';
-const STORAGE_KEY_TIER = 'hedef15_tier_v2';
-const STORAGE_KEY_BUDGET = 'hedef15_budget_v2';
+const STORAGE_KEY_MATCHES = 'hedef15_matches_v3';
+const STORAGE_KEY_FILTERS = 'hedef15_filters_v3';
+const STORAGE_KEY_FORMULA = 'hedef15_formula_v3';
+const STORAGE_KEY_TIER = 'hedef15_tier_v3';
+const STORAGE_KEY_BUDGET = 'hedef15_budget_v3';
 
 const CALC_DEBOUNCE_MS = 150;
 
