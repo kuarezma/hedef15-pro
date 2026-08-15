@@ -1,26 +1,41 @@
 import React, { useState } from 'react';
-import { Column, SyndicateShare } from '../core/types';
+import { Column } from '../core/types';
 import { Users, Share2, Copy, Check, ShieldCheck, DollarSign } from 'lucide-react';
 import confetti from 'canvas-confetti';
+
+import { encodePoolToUrl, decodePoolFromUrl, columnsToPoolStrings, poolStringsToColumns } from '../services/syndicateService';
 
 interface SyndicateShareModalProps {
   columns: Column[];
   totalCostTL: number;
+  importedTitle?: string | null;
 }
 
 export const SyndicateShareModal: React.FC<SyndicateShareModalProps> = ({
   columns,
-  totalCostTL
+  totalCostTL,
+  importedTitle
 }) => {
-  const [totalShares, setTotalShares] = useState<number>(10);
-  const [poolTitle, setPoolTitle] = useState<string>('Hedef 15 Şampiyonluk Havuzu');
-  const [creatorName, setCreatorName] = useState<string>('Uğur Hoca');
+  const importedPool = decodePoolFromUrl();
+  const displayColumns = importedPool ? poolStringsToColumns(importedPool.columns) : columns;
+  const displayCost = importedPool?.totalCostTL ?? totalCostTL;
+
+  const [totalShares, setTotalShares] = useState<number>(importedPool?.totalShares ?? 10);
+  const [poolTitle, setPoolTitle] = useState<string>(importedPool?.title ?? importedTitle ?? 'Hedef 15 Şampiyonluk Havuzu');
+  const [creatorName, setCreatorName] = useState<string>(importedPool?.creatorName ?? 'Uğur Hoca');
   const [copied, setCopied] = useState<boolean>(false);
 
-  const pricePerShare = Math.max(1, Math.round(totalCostTL / totalShares));
-  const shareUrl = `https://hedef15pro.app/havuz?id=${encodeURIComponent(poolTitle.toLowerCase().replace(/\s+/g, '-'))}&shares=${totalShares}&cost=${totalCostTL}`;
+  const pricePerShare = Math.max(1, Math.round(displayCost / totalShares));
 
   const handleCopyLink = () => {
+    const shareUrl = encodePoolToUrl({
+      title: poolTitle,
+      creatorName,
+      totalShares,
+      totalCostTL: displayCost,
+      columns: columnsToPoolStrings(displayColumns),
+      createdAt: new Date().toISOString()
+    });
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     confetti({ particleCount: 50, spread: 60 });
@@ -100,11 +115,11 @@ export const SyndicateShareModal: React.FC<SyndicateShareModalProps> = ({
             <div className="grid grid-cols-3 gap-2 my-4 text-center">
               <div className="bg-gray-900/80 border border-gray-800 rounded-lg p-2.5">
                 <div className="text-[10px] text-gray-500">Toplam Kolon</div>
-                <div className="font-mono font-bold text-white text-sm mt-0.5">{columns.length} Kolon</div>
+                <div className="font-mono font-bold text-white text-sm mt-0.5">{displayColumns.length} Kolon</div>
               </div>
               <div className="bg-gray-900/80 border border-gray-800 rounded-lg p-2.5">
                 <div className="text-[10px] text-gray-500">Toplam Tutar</div>
-                <div className="font-mono font-bold text-emerald-400 text-sm mt-0.5">{totalCostTL} TL</div>
+                <div className="font-mono font-bold text-emerald-400 text-sm mt-0.5">{displayCost} TL</div>
               </div>
               <div className="bg-gray-900/80 border border-gray-800 rounded-lg p-2.5">
                 <div className="text-[10px] text-gray-500">Pay Başına</div>

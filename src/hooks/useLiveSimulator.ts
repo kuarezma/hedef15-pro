@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Column, LiveMatchStatus, LiveRadarState, Match, Outcome } from '../core/types';
 
+import { fetchLiveScores, mapPayloadToStatuses, startLiveScorePolling } from '../services/liveScoreService';
+
 /** Cap columns evaluated in live radar to keep UI responsive */
 const MAX_LIVE_RADAR_COLUMNS = 2500;
 
@@ -17,6 +19,8 @@ function sampleColumnsForLiveRadar(columns: Column[]): Column[] {
 export function useLiveSimulator(matches: Match[], columns: Column[]) {
   const evaluatedColumns = useMemo(() => sampleColumnsForLiveRadar(columns), [columns]);
   const [isLiveRunning, setIsLiveRunning] = useState<boolean>(false);
+  const [useLiveApi, setUseLiveApi] = useState<boolean>(false);
+  const [liveApiActive, setLiveApiActive] = useState<boolean>(false);
   const [matchStatuses, setMatchStatuses] = useState<LiveMatchStatus[]>(() => {
     return matches.map(m => ({
       matchId: m.id,
@@ -181,15 +185,35 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     }));
   }, [matches]);
 
-  // Ticker loop
+  // Poll live score API when enabled
   useEffect(() => {
-    if (!isLiveRunning) return;
+    if (!useLiveApi) {
+      setLiveApiActive(false);
+      return;
+    }
+    setLiveApiActive(true);
+    return startLiveScorePolling((payload) => {
+      setMatchStatuses(mapPayloadToStatuses(payload));
+    });
+  }, [useLiveApi]);
+
+  // One-shot fetch when toggling live API on
+  useEffect(() => {
+    if (!useLiveApi) return;
+    fetchLiveScores().then(data => {
+      if (data) setMatchStatuses(mapPayloadToStatuses(data));
+    });
+  }, [useLiveApi]);
+
+  // Simulation ticker (when live API is off)
+  useEffect(() => {
+    if (!isLiveRunning || useLiveApi) return;
     const interval = setInterval(() => {
       stepSimulation();
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [isLiveRunning, stepSimulation]);
+  }, [isLiveRunning, useLiveApi, stepSimulation]);
 
   return {
     isLiveRunning,
@@ -199,6 +223,9 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     radarState,
     stepSimulation,
     resetSimulation,
-    fastForwardToFinish
+    fastForwardToFinish,
+    useLiveApi,
+    setUseLiveApi,
+    liveApiActive
   };
 }

@@ -126,6 +126,74 @@ export function generateSuperSevenFormula(matches: Match[], filterConfig: Filter
   return filterColumns(columns, matches, filterConfig);
 }
 
+/** Kapalı formül: tüm maçları 1-X-2 kapatıp Monte Carlo + indirgeme ile kolon üretir */
+export function generateClosedOnlyFormula(matches: Match[], filterConfig: FilterConfig, targetMaxColumns?: number): Column[] {
+  const closedMatches = matches.map(m => ({
+    ...m,
+    userPicks: { '1': true, 'X': true, '2': true } as Match['userPicks']
+  }));
+  const target = targetMaxColumns ?? 150;
+  const sampled = generateProbabilisticColumns(closedMatches, target * 4, filterConfig, 20000);
+  return reduceColumnsByGuarantee(sampled, '13', target);
+}
+
+/** Çifte formül: her maçta en düşük 2 oranı seçer */
+export function generateDoubleOnlyFormula(matches: Match[], filterConfig: FilterConfig, targetMaxColumns?: number): Column[] {
+  const doubleMatches = matches.map(m => {
+    const sorted = (['1', 'X', '2'] as Outcome[]).sort((a, b) => m.odds[a] - m.odds[b]);
+    return {
+      ...m,
+      userPicks: {
+        '1': sorted[0] === '1' || sorted[1] === '1',
+        'X': sorted[0] === 'X' || sorted[1] === 'X',
+        '2': sorted[0] === '2' || sorted[1] === '2'
+      } as Match['userPicks']
+    };
+  });
+  const target = targetMaxColumns ?? 150;
+  const rawCount = calculateRawCombinationCount(doubleMatches);
+
+  if (rawCount > 8192) {
+    const sampled = generateProbabilisticColumns(doubleMatches, target * 4, filterConfig, 15000);
+    return reduceColumnsByGuarantee(sampled, '14', target);
+  }
+
+  const universe = generateCartesianProduct(doubleMatches, rawCount);
+  const filtered = filterColumns(universe, doubleMatches, filterConfig);
+  return reduceColumnsByGuarantee(filtered, '14', target);
+}
+
+/** Kapsamlı formül: geniş evren + 13 garanti indirgeme */
+export function generateComprehensiveFormula(
+  matches: Match[],
+  filterConfig: FilterConfig,
+  targetMaxColumns?: number
+): Column[] {
+  const universe = generateCartesianProduct(matches, 100000);
+  const filtered = filterColumns(universe, matches, filterConfig);
+  return reduceColumnsByGuarantee(filtered, '13', targetMaxColumns);
+}
+
+/** Şans Gele: yüksek sürpriz ağırlıklı Monte Carlo */
+export function generateChanceComeFormula(
+  matches: Match[],
+  targetColumnCount: number,
+  filterConfig: FilterConfig
+): Column[] {
+  const surpriseMatches = matches.map(m => {
+    const sorted = (['1', 'X', '2'] as Outcome[]).sort((a, b) => m.odds[b] - m.odds[a]);
+    return {
+      ...m,
+      userPercents: {
+        '1': sorted[0] === '1' ? 15 : sorted[1] === '1' ? 25 : sorted[2] === '1' ? 35 : 25,
+        'X': sorted[0] === 'X' ? 15 : sorted[1] === 'X' ? 25 : sorted[2] === 'X' ? 35 : 25,
+        '2': sorted[0] === '2' ? 15 : sorted[1] === '2' ? 25 : sorted[2] === '2' ? 35 : 25
+      }
+    };
+  });
+  return generateProbabilisticColumns(surpriseMatches, targetColumnCount, filterConfig);
+}
+
 export interface FormulaResult {
   columns: Column[];
   rawCount: number;
@@ -167,6 +235,22 @@ export function runFormulaEngine(
     case 'super_seven': {
       const cols = generateSuperSevenFormula(matches, filters);
       return { columns: cols, rawCount: Math.pow(2, 7), filteredCount: cols.length };
+    }
+    case 'closed_only': {
+      const cols = generateClosedOnlyFormula(matches, filters, targetCols);
+      return { columns: cols, rawCount: Math.pow(3, 15), filteredCount: cols.length };
+    }
+    case 'double_only': {
+      const cols = generateDoubleOnlyFormula(matches, filters, targetCols);
+      return { columns: cols, rawCount: Math.pow(2, 15), filteredCount: cols.length };
+    }
+    case 'comprehensive': {
+      const cols = generateComprehensiveFormula(matches, filters, targetCols);
+      return { columns: cols, rawCount, filteredCount: cols.length };
+    }
+    case 'chance_come': {
+      const cols = generateChanceComeFormula(matches, targetCols, filters);
+      return { columns: cols, rawCount: targetCols * 8, filteredCount: cols.length };
     }
     default: {
       const universe = generateCartesianProduct(matches, 100000);

@@ -1,16 +1,19 @@
 import React from 'react';
-import { FilterConfig } from '../core/types';
-import { Zap, Hash, AlertTriangle, Repeat, Layers } from 'lucide-react';
+import { Column, FilterConfig, Outcome } from '../core/types';
+import { Zap, Hash, AlertTriangle, Repeat, Layers, GitCompare, RefreshCw } from 'lucide-react';
 
 interface FilterPanelProps {
   filters: FilterConfig;
   setFilters: React.Dispatch<React.SetStateAction<FilterConfig>>;
-  onApplyFilters: () => void;
+  onApplyFilters?: () => void;
+  generatedColumns?: Column[];
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   filters,
-  setFilters
+  setFilters,
+  onApplyFilters,
+  generatedColumns = []
 }) => {
   const updateRange = (key: 'count1' | 'countX' | 'count2' | 'surpriseCount' | 'signChanges', index: 0 | 1, value: number) => {
     setFilters(prev => {
@@ -33,6 +36,32 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     }));
   };
 
+  type GroupRangeKey = 'min1' | 'max1' | 'minX' | 'maxX' | 'min2' | 'max2' | 'minSurprise' | 'maxSurprise';
+
+  const updateGroupRange = (groupId: string, key: GroupRangeKey, value: number) => {
+    setFilters(prev => ({
+      ...prev,
+      groupFilters: prev.groupFilters.map(g =>
+        g.groupId === groupId ? { ...g, [key]: Math.max(0, Math.min(15, value)) } : g
+      )
+    }));
+  };
+
+  const setReferenceFromColumn = (colIndex: number) => {
+    const col = generatedColumns[colIndex];
+    if (!col) return;
+    setFilters(prev => ({
+      ...prev,
+      referenceColumn: [...col] as Outcome[],
+      minMatchWithRef: prev.minMatchWithRef ?? 10,
+      maxMatchWithRef: prev.maxMatchWithRef ?? 15
+    }));
+  };
+
+  const clearReferenceColumn = () => {
+    setFilters(prev => ({ ...prev, referenceColumn: undefined }));
+  };
+
   return (
     <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl backdrop-blur-sm">
       {/* Header with Enable Switch */}
@@ -48,6 +77,15 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {onApplyFilters && (
+            <button
+              onClick={onApplyFilters}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold border border-emerald-500/30 transition-colors shrink-0"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Hemen Uygula</span>
+            </button>
+          )}
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <span className="text-xs font-semibold text-gray-300">
               {filters.enabled ? 'Filtreler Aktif' : 'Filtreler Kapalı'}
@@ -319,15 +357,101 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                   </span>
                 </div>
                 {group.enabled && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[11px] text-gray-300 font-mono tabular-nums">
-                    <div>1 Sayısı: {group.min1} - {group.max1}</div>
-                    <div>X Sayısı: {group.minX} - {group.maxX}</div>
-                    <div>2 Sayısı: {group.min2} - {group.max2}</div>
-                    <div>Sürpriz: {group.minSurprise} - {group.maxSurprise}</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[11px] text-gray-300">
+                    {([
+                      ['min1', 'max1', '1 Sayısı', group.min1, group.max1],
+                      ['minX', 'maxX', 'X Sayısı', group.minX, group.maxX],
+                      ['min2', 'max2', '2 Sayısı', group.min2, group.max2],
+                      ['minSurprise', 'maxSurprise', 'Sürpriz', group.minSurprise, group.maxSurprise]
+                    ] as const).map(([minKey, maxKey, label, minVal, maxVal]) => (
+                      <div key={minKey} className="bg-gray-900/60 border border-gray-800 rounded-lg p-2">
+                        <div className="text-[10px] text-gray-500 mb-1">{label}</div>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={15}
+                            value={minVal}
+                            onChange={(e) => updateGroupRange(group.groupId, minKey, Number(e.target.value))}
+                            className="w-10 bg-gray-800 border border-gray-700 rounded px-1 py-0.5 text-[10px] font-mono text-white text-center"
+                          />
+                          <span className="text-gray-600">-</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={15}
+                            value={maxVal}
+                            onChange={(e) => updateGroupRange(group.groupId, maxKey, Number(e.target.value))}
+                            className="w-10 bg-gray-800 border border-gray-700 rounded px-1 py-0.5 text-[10px] font-mono text-white text-center"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Section 5: Reference Column Filter */}
+        <div>
+          <div className="flex items-center gap-2 mb-2.5">
+            <GitCompare className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider">5. Ortak Kolon Eleme (Referans Kolon)</h3>
+          </div>
+          <div className="bg-[#0B0F19] border border-gray-800 rounded-xl p-3.5 space-y-3">
+            <p className="text-[11px] text-gray-400">
+              Seçilen referans kolona göre minimum/maksimum eşleşme sayısı ile kolonları eleyin.
+            </p>
+            {filters.referenceColumn ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-mono font-bold text-purple-400 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20">
+                  {filters.referenceColumn.join('')}
+                </span>
+                <button
+                  onClick={clearReferenceColumn}
+                  className="text-[10px] text-red-400 hover:text-red-300 font-semibold"
+                >
+                  Referansı Kaldır
+                </button>
+              </div>
+            ) : (
+              <span className="text-[11px] text-gray-500">Henüz referans kolon seçilmedi.</span>
+            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="text-[11px] text-gray-400">Min eşleşme:</label>
+              <input
+                type="number"
+                min={0}
+                max={15}
+                value={filters.minMatchWithRef ?? 10}
+                onChange={(e) => setFilters(prev => ({ ...prev, minMatchWithRef: Number(e.target.value) }))}
+                className="w-14 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs font-mono text-white"
+              />
+              <label className="text-[11px] text-gray-400">Max eşleşme:</label>
+              <input
+                type="number"
+                min={0}
+                max={15}
+                value={filters.maxMatchWithRef ?? 15}
+                onChange={(e) => setFilters(prev => ({ ...prev, maxMatchWithRef: Number(e.target.value) }))}
+                className="w-14 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs font-mono text-white"
+              />
+            </div>
+            {generatedColumns.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {generatedColumns.slice(0, 8).map((col, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setReferenceFromColumn(idx)}
+                    className="text-[10px] font-mono px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded border border-gray-700"
+                  >
+                    #{idx + 1}: {col.join('').slice(0, 8)}…
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

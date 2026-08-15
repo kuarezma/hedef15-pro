@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormulaType, GuaranteeTier } from '../core/types';
-import { ShieldCheck, Percent, Layers, Sparkles, Grid, Sliders, DollarSign, Loader2, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Percent, Layers, Sparkles, Grid, Sliders, DollarSign, Loader2, RefreshCw, Lock, Copy, BookOpen, Clover } from 'lucide-react';
 
 interface FormulaSelectorProps {
   formulaType: FormulaType;
@@ -75,6 +75,38 @@ export const FormulaSelector: React.FC<FormulaSelectorProps> = ({
       badge: 'Standart',
       icon: Sliders,
       color: 'from-gray-500/20 to-slate-500/20 border-gray-500/40 text-gray-300'
+    },
+    {
+      id: 'closed_only' as FormulaType,
+      title: '🔒 Kapalı Formül',
+      desc: 'Tüm maçları 1-X-2 kapalı oynayıp 13 garanti ile indirger.',
+      badge: 'Tam Kapama',
+      icon: Lock,
+      color: 'from-red-500/20 to-orange-500/20 border-red-500/40 text-red-400'
+    },
+    {
+      id: 'double_only' as FormulaType,
+      title: '✌ Çifte Formül',
+      desc: 'Her maçta en düşük 2 oranı seçerek çifte şans kombinasyonları üretir.',
+      badge: 'Çifte Şans',
+      icon: Copy,
+      color: 'from-indigo-500/20 to-violet-500/20 border-indigo-500/40 text-indigo-400'
+    },
+    {
+      id: 'comprehensive' as FormulaType,
+      title: '📚 Kapsamlı Formül',
+      desc: 'Geniş evren + 13 garanti indirgeme ile maksimum kapsama sağlar.',
+      badge: 'Geniş Havuz',
+      icon: BookOpen,
+      color: 'from-teal-500/20 to-emerald-500/20 border-teal-500/40 text-teal-400'
+    },
+    {
+      id: 'chance_come' as FormulaType,
+      title: '🍀 Şans Gele',
+      desc: 'Yüksek sürpriz ağırlıklı Monte Carlo ile şanslı kolonlar üretir.',
+      badge: 'Sürpriz',
+      icon: Clover,
+      color: 'from-lime-500/20 to-green-500/20 border-lime-500/40 text-lime-400'
     }
   ];
 
@@ -183,7 +215,7 @@ export const FormulaSelector: React.FC<FormulaSelectorProps> = ({
       </div>
 
       {/* Guarantee Tier Selector */}
-      {(formulaType === 'guaranteed_custom' || formulaType === 'nine_columns') && (
+      {(formulaType === 'guaranteed_custom' || formulaType === 'nine_columns' || formulaType === 'comprehensive' || formulaType === 'closed_only' || formulaType === 'double_only') && (
         <div className="bg-[#0B0F19]/90 border border-gray-800 rounded-xl p-3 sm:p-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
