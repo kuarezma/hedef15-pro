@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header, ActiveTab } from './components/Header';
 import { FormulaSelector } from './components/FormulaSelector';
 import { MatchList } from './components/MatchList';
@@ -12,11 +12,13 @@ import { AutoPlayModal } from './components/AutoPlayModal';
 import { StatsModal } from './components/StatsModal';
 import { useTotoEngine } from './hooks/useTotoEngine';
 import { Outcome } from './core/types';
+import { decodePoolFromUrl } from './services/syndicateService';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('coupon');
   const [isAutoPlayOpen, setIsAutoPlayOpen] = useState<boolean>(false);
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
+  const [importedPoolTitle, setImportedPoolTitle] = useState<string | null>(null);
 
   const {
     matches,
@@ -38,8 +40,20 @@ export function App() {
     generatedColumns,
     calcSummary,
     isCalculating,
-    runCalculation
+    runCalculation,
+    refreshBulletin,
+    bulletinMeta,
+    isBulletinLoading
   } = useTotoEngine();
+
+  // Load shared syndicate pool from URL
+  useEffect(() => {
+    const pool = decodePoolFromUrl();
+    if (pool && pool.columns.length > 0) {
+      setImportedPoolTitle(pool.title);
+      setActiveTab('syndicate');
+    }
+  }, []);
 
   const handleApplyValueSelections = (selections: { matchId: number; outcome: Outcome }[]) => {
     setMatches(prev => prev.map(m => {
@@ -69,6 +83,9 @@ export function App() {
         totalCostTL={calcSummary.totalCostTL}
         onOpenAutoPlay={() => setIsAutoPlayOpen(true)}
         onOpenStats={() => setIsStatsOpen(true)}
+        onRefreshBulletin={() => refreshBulletin(true)}
+        isBulletinLoading={isBulletinLoading}
+        bulletinMeta={bulletinMeta}
       />
 
       {/* Main Content Area */}
@@ -102,6 +119,7 @@ export function App() {
               filters={filters}
               setFilters={setFilters}
               onApplyFilters={runCalculation}
+              generatedColumns={generatedColumns}
             />
 
             <ColumnViewer
@@ -120,6 +138,7 @@ export function App() {
               filters={filters}
               setFilters={setFilters}
               onApplyFilters={runCalculation}
+              generatedColumns={generatedColumns}
             />
             <ColumnViewer
               columns={generatedColumns}
@@ -166,6 +185,7 @@ export function App() {
             <SyndicateShareModal
               columns={generatedColumns}
               totalCostTL={calcSummary.totalCostTL}
+              importedTitle={importedPoolTitle}
             />
           </div>
         )}

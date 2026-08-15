@@ -1,9 +1,26 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Column, LiveMatchStatus, LiveRadarState, Match, Outcome } from '../core/types';
-import { countMatches } from '../core/combinatorics';
+
+import { fetchLiveScores, mapPayloadToStatuses, startLiveScorePolling } from '../services/liveScoreService';
+
+/** Cap columns evaluated in live radar to keep UI responsive */
+const MAX_LIVE_RADAR_COLUMNS = 2500;
+
+function sampleColumnsForLiveRadar(columns: Column[]): Column[] {
+  if (columns.length <= MAX_LIVE_RADAR_COLUMNS) return columns;
+  const step = Math.ceil(columns.length / MAX_LIVE_RADAR_COLUMNS);
+  const sampled: Column[] = [];
+  for (let i = 0; i < columns.length; i += step) {
+    sampled.push(columns[i]);
+  }
+  return sampled;
+}
 
 export function useLiveSimulator(matches: Match[], columns: Column[]) {
+  const evaluatedColumns = useMemo(() => sampleColumnsForLiveRadar(columns), [columns]);
   const [isLiveRunning, setIsLiveRunning] = useState<boolean>(false);
+  const [useLiveApi, setUseLiveApi] = useState<boolean>(false);
+  const [liveApiActive, setLiveApiActive] = useState<boolean>(false);
   const [matchStatuses, setMatchStatuses] = useState<LiveMatchStatus[]>(() => {
     return matches.map(m => ({
       matchId: m.id,
@@ -32,7 +49,7 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     let count12 = 0;
     let lost = 0;
 
-    const columnGrades = columns.map(col => {
+    const columnGrades = evaluatedColumns.map(col => {
       let currentHits = 0;
       let finishedMismatches = 0;
 
@@ -86,7 +103,7 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
         lost
       }
     };
-  }, [columns, currentOutcomes, matchStatuses]);
+  }, [evaluatedColumns, currentOutcomes, matchStatuses]);
 
   // Random simulation tick
   const stepSimulation = useCallback(() => {
@@ -168,15 +185,35 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     }));
   }, [matches]);
 
-  // Ticker loop
+  // Poll live score API when enabled
   useEffect(() => {
-    if (!isLiveRunning) return;
+    if (!useLiveApi) {
+      setLiveApiActive(false);
+      return;
+    }
+    setLiveApiActive(true);
+    return startLiveScorePolling((payload) => {
+      setMatchStatuses(mapPayloadToStatuses(payload));
+    });
+  }, [useLiveApi]);
+
+  // One-shot fetch when toggling live API on
+  useEffect(() => {
+    if (!useLiveApi) return;
+    fetchLiveScores().then(data => {
+      if (data) setMatchStatuses(mapPayloadToStatuses(data));
+    });
+  }, [useLiveApi]);
+
+  // Simulation ticker (when live API is off)
+  useEffect(() => {
+    if (!isLiveRunning || useLiveApi) return;
     const interval = setInterval(() => {
       stepSimulation();
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [isLiveRunning, stepSimulation]);
+  }, [isLiveRunning, useLiveApi, stepSimulation]);
 
   return {
     isLiveRunning,
@@ -186,6 +223,9 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     radarState,
     stepSimulation,
     resetSimulation,
-    fastForwardToFinish
+    fastForwardToFinish,
+    useLiveApi,
+    setUseLiveApi,
+    liveApiActive
   };
 }

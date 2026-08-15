@@ -16,7 +16,10 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, columns }) => {
     radarState,
     stepSimulation,
     resetSimulation,
-    fastForwardToFinish
+    fastForwardToFinish,
+    useLiveApi,
+    setUseLiveApi,
+    liveApiActive
   } = useLiveSimulator(matches, columns);
 
   return (
@@ -28,7 +31,7 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, columns }) => {
             <Radio className="w-5 h-5 text-red-500 animate-pulse shrink-0" />
             <h2 className="text-base font-bold text-white tracking-tight">Canlı Hafta Sonu Skor & Derece Radarı</h2>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
-              {isLiveRunning ? 'CANLI YAYIN' : 'HAZIR / DURDU'}
+              {useLiveApi && liveApiActive ? 'CANLI API' : isLiveRunning ? 'SİMÜLASYON' : 'HAZIR / DURDU'}
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
@@ -39,7 +42,19 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, columns }) => {
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
+            onClick={() => setUseLiveApi(prev => !prev)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              useLiveApi
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                : 'bg-gray-800 text-gray-400 border border-gray-700 hover:text-white'
+            }`}
+          >
+            {useLiveApi ? 'Canlı API Açık' : 'Canlı API'}
+          </button>
+
+          <button
             onClick={() => setIsLiveRunning(prev => !prev)}
+            disabled={useLiveApi}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shrink-0 ${
               isLiveRunning
                 ? 'bg-amber-500 hover:bg-amber-600 text-white'

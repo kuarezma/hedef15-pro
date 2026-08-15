@@ -81,6 +81,13 @@ export const MatchList: React.FC<MatchListProps> = ({
             <span>Tümünü Kapat</span>
           </button>
           <button
+            onClick={() => applyPreset('CLEAR_ALL')}
+            className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-semibold border border-gray-700 transition-colors active:scale-95 shrink-0"
+            title="Tercihleri bülten varsayılanına sıfırla"
+          >
+            Sıfırla
+          </button>
+          <button
             onClick={() => applyPreset('ALL_1')}
             className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-bold border border-gray-700 transition-colors active:scale-95 shrink-0"
           >

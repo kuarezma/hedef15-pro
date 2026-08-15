@@ -1,0 +1,533 @@
+{
+  "week": 12,
+  "season": "2025-26",
+  "updatedAt": "2026-08-15T15:09:10.722Z",
+  "source": "hedef15-pro bulletin API",
+  "matches": [
+    {
+      "id": 1,
+      "order": 1,
+      "homeTeam": "Galatasaray",
+      "awayTeam": "Trabzonspor",
+      "league": "Trendyol Süper Lig",
+      "matchDate": "Cumartesi",
+      "matchTime": "19:00",
+      "odds": {
+        "1": 1.62,
+        "2": 4.8,
+        "X": 3.75
+      },
+      "publicPicks": {
+        "1": 68,
+        "2": 12,
+        "X": 20
+      },
+      "aiPicks": {
+        "1": 58,
+        "2": 18,
+        "X": 24
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": false
+      },
+      "userPercents": {
+        "1": 65,
+        "2": 10,
+        "X": 25
+      },
+      "group": "Süper Lig"
+    },
+    {
+      "id": 2,
+      "order": 2,
+      "homeTeam": "Fenerbahçe",
+      "awayTeam": "Başakşehir",
+      "league": "Trendyol Süper Lig",
+      "matchDate": "Pazar",
+      "matchTime": "19:00",
+      "odds": {
+        "1": 1.45,
+        "2": 6.1,
+        "X": 4.2
+      },
+      "publicPicks": {
+        "1": 74,
+        "2": 10,
+        "X": 16
+      },
+      "aiPicks": {
+        "1": 65,
+        "2": 13,
+        "X": 22
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": false
+      },
+      "userPercents": {
+        "1": 70,
+        "2": 10,
+        "X": 20
+      },
+      "group": "Süper Lig"
+    },
+    {
+      "id": 3,
+      "order": 3,
+      "homeTeam": "Beşiktaş",
+      "awayTeam": "Kasımpaşa",
+      "league": "Trendyol Süper Lig",
+      "matchDate": "Pazar",
+      "matchTime": "16:00",
+      "odds": {
+        "1": 1.7,
+        "2": 4.3,
+        "X": 3.6
+      },
+      "publicPicks": {
+        "1": 62,
+        "2": 16,
+        "X": 22
+      },
+      "aiPicks": {
+        "1": 54,
+        "2": 20,
+        "X": 26
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": true
+      },
+      "userPercents": {
+        "1": 55,
+        "2": 15,
+        "X": 30
+      },
+      "group": "Süper Lig"
+    },
+    {
+      "id": 4,
+      "order": 4,
+      "homeTeam": "Samsunspor",
+      "awayTeam": "Antalyaspor",
+      "league": "Trendyol Süper Lig",
+      "matchDate": "Cumartesi",
+      "matchTime": "16:00",
+      "odds": {
+        "1": 2.15,
+        "2": 3.1,
+        "X": 3.2
+      },
+      "publicPicks": {
+        "1": 48,
+        "2": 22,
+        "X": 30
+      },
+      "aiPicks": {
+        "1": 43,
+        "2": 27,
+        "X": 30
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": true
+      },
+      "userPercents": {
+        "1": 45,
+        "2": 20,
+        "X": 35
+      },
+      "group": "Süper Lig"
+    },
+    {
+      "id": 5,
+      "order": 5,
+      "homeTeam": "Göztepe",
+      "awayTeam": "Sivasspor",
+      "league": "Trendyol Süper Lig",
+      "matchDate": "Pazar",
+      "matchTime": "13:30",
+      "odds": {
+        "1": 1.95,
+        "2": 3.6,
+        "X": 3.3
+      },
+      "publicPicks": {
+        "1": 52,
+        "2": 20,
+        "X": 28
+      },
+      "aiPicks": {
+        "1": 47,
+        "2": 24,
+        "X": 29
+      },
+      "userPicks": {
+        "1": true,
+        "2": true,
+        "X": true
+      },
+      "userPercents": {
+        "1": 50,
+        "2": 20,
+        "X": 30
+      },
+      "group": "Süper Lig"
+    },
+    {
+      "id": 6,
+      "order": 6,
+      "homeTeam": "Arsenal",
+      "awayTeam": "Chelsea",
+      "league": "Premier League",
+      "matchDate": "Cumartesi",
+      "matchTime": "20:30",
+      "odds": {
+        "1": 1.85,
+        "2": 3.8,
+        "X": 3.6
+      },
+      "publicPicks": {
+        "1": 56,
+        "2": 18,
+        "X": 26
+      },
+      "aiPicks": {
+        "1": 50,
+        "2": 23,
+        "X": 27
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": true
+      },
+      "userPercents": {
+        "1": 50,
+        "2": 20,
+        "X": 30
+      },
+      "group": "Premier Lig"
+    },
+    {
+      "id": 7,
+      "order": 7,
+      "homeTeam": "Manchester City",
+      "awayTeam": "Newcastle",
+      "league": "Premier League",
+      "matchDate": "Cumartesi",
+      "matchTime": "17:30",
+      "odds": {
+        "1": 1.5,
+        "2": 5.5,
+        "X": 4.4
+      },
+      "publicPicks": {
+        "1": 70,
+        "2": 12,
+        "X": 18
+      },
+      "aiPicks": {
+        "1": 63,
+        "2": 15,
+        "X": 22
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": false
+      },
+      "userPercents": {
+        "1": 70,
+        "2": 10,
+        "X": 20
+      },
+      "group": "Premier Lig"
+    },
+    {
+      "id": 8,
+      "order": 8,
+      "homeTeam": "Liverpool",
+      "awayTeam": "Aston Villa",
+      "league": "Premier League",
+      "matchDate": "Pazar",
+      "matchTime": "16:00",
+      "odds": {
+        "1": 1.6,
+        "2": 4.7,
+        "X": 4.1
+      },
+      "publicPicks": {
+        "1": 65,
+        "2": 14,
+        "X": 21
+      },
+      "aiPicks": {
+        "1": 59,
+        "2": 18,
+        "X": 23
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": false
+      },
+      "userPercents": {
+        "1": 65,
+        "2": 10,
+        "X": 25
+      },
+      "group": "Premier Lig"
+    },
+    {
+      "id": 9,
+      "order": 9,
+      "homeTeam": "Tottenham",
+      "awayTeam": "Brighton",
+      "league": "Premier League",
+      "matchDate": "Pazar",
+      "matchTime": "18:30",
+      "odds": {
+        "1": 2.05,
+        "2": 3.15,
+        "X": 3.7
+      },
+      "publicPicks": {
+        "1": 49,
+        "2": 24,
+        "X": 27
+      },
+      "aiPicks": {
+        "1": 45,
+        "2": 29,
+        "X": 26
+      },
+      "userPicks": {
+        "1": true,
+        "2": true,
+        "X": true
+      },
+      "userPercents": {
+        "1": 45,
+        "2": 30,
+        "X": 25
+      },
+      "group": "Premier Lig"
+    },
+    {
+      "id": 10,
+      "order": 10,
+      "homeTeam": "Real Madrid",
+      "awayTeam": "Atletico Madrid",
+      "league": "La Liga",
+      "matchDate": "Pazar",
+      "matchTime": "22:00",
+      "odds": {
+        "1": 1.9,
+        "2": 3.75,
+        "X": 3.5
+      },
+      "publicPicks": {
+        "1": 55,
+        "2": 17,
+        "X": 28
+      },
+      "aiPicks": {
+        "1": 49,
+        "2": 23,
+        "X": 28
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": true
+      },
+      "userPercents": {
+        "1": 50,
+        "2": 20,
+        "X": 30
+      },
+      "group": "Avrupa Ligleri"
+    },
+    {
+      "id": 11,
+      "order": 11,
+      "homeTeam": "Barcelona",
+      "awayTeam": "Real Sociedad",
+      "league": "La Liga",
+      "matchDate": "Cumartesi",
+      "matchTime": "21:00",
+      "odds": {
+        "1": 1.42,
+        "2": 6.5,
+        "X": 4.6
+      },
+      "publicPicks": {
+        "1": 75,
+        "2": 10,
+        "X": 15
+      },
+      "aiPicks": {
+        "1": 67,
+        "2": 12,
+        "X": 21
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": false
+      },
+      "userPercents": {
+        "1": 75,
+        "2": 10,
+        "X": 15
+      },
+      "group": "Avrupa Ligleri"
+    },
+    {
+      "id": 12,
+      "order": 12,
+      "homeTeam": "Inter",
+      "awayTeam": "Juventus",
+      "league": "Serie A",
+      "matchDate": "Pazar",
+      "matchTime": "20:45",
+      "odds": {
+        "1": 2,
+        "2": 3.7,
+        "X": 3.25
+      },
+      "publicPicks": {
+        "1": 50,
+        "2": 18,
+        "X": 32
+      },
+      "aiPicks": {
+        "1": 46,
+        "2": 24,
+        "X": 30
+      },
+      "userPicks": {
+        "1": true,
+        "2": true,
+        "X": true
+      },
+      "userPercents": {
+        "1": 45,
+        "2": 20,
+        "X": 35
+      },
+      "group": "Avrupa Ligleri"
+    },
+    {
+      "id": 13,
+      "order": 13,
+      "homeTeam": "Milan",
+      "awayTeam": "Napoli",
+      "league": "Serie A",
+      "matchDate": "Cumartesi",
+      "matchTime": "21:45",
+      "odds": {
+        "1": 2.3,
+        "2": 2.95,
+        "X": 3.3
+      },
+      "publicPicks": {
+        "1": 42,
+        "2": 28,
+        "X": 30
+      },
+      "aiPicks": {
+        "1": 40,
+        "2": 30,
+        "X": 30
+      },
+      "userPicks": {
+        "1": true,
+        "2": true,
+        "X": true
+      },
+      "userPercents": {
+        "1": 35,
+        "2": 30,
+        "X": 35
+      },
+      "group": "Avrupa Ligleri"
+    },
+    {
+      "id": 14,
+      "order": 14,
+      "homeTeam": "Bayern München",
+      "awayTeam": "Bayer Leverkusen",
+      "league": "Bundesliga",
+      "matchDate": "Cumartesi",
+      "matchTime": "19:30",
+      "odds": {
+        "1": 1.75,
+        "2": 3.9,
+        "X": 4.1
+      },
+      "publicPicks": {
+        "1": 60,
+        "2": 18,
+        "X": 22
+      },
+      "aiPicks": {
+        "1": 54,
+        "2": 22,
+        "X": 24
+      },
+      "userPicks": {
+        "1": true,
+        "2": false,
+        "X": true
+      },
+      "userPercents": {
+        "1": 55,
+        "2": 20,
+        "X": 25
+      },
+      "group": "Avrupa Ligleri"
+    },
+    {
+      "id": 15,
+      "order": 15,
+      "homeTeam": "Dortmund",
+      "awayTeam": "RB Leipzig",
+      "league": "Bundesliga",
+      "matchDate": "Pazar",
+      "matchTime": "18:30",
+      "odds": {
+        "1": 2.1,
+        "2": 3.1,
+        "X": 3.6
+      },
+      "publicPicks": {
+        "1": 47,
+        "2": 25,
+        "X": 28
+      },
+      "aiPicks": {
+        "1": 44,
+        "2": 29,
+        "X": 27
+      },
+      "userPicks": {
+        "1": true,
+        "2": true,
+        "X": true
+      },
+      "userPercents": {
+        "1": 40,
+        "2": 30,
+        "X": 30
+      },
+      "group": "Avrupa Ligleri"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles } from 'lucide-react';
+import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, RefreshCw, Loader2 } from 'lucide-react';
 
 export type ActiveTab = 'coupon' | 'filters' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
 
@@ -10,6 +10,9 @@ interface HeaderProps {
   totalCostTL: number;
   onOpenAutoPlay: () => void;
   onOpenStats: () => void;
+  onRefreshBulletin?: () => void;
+  isBulletinLoading?: boolean;
+  bulletinMeta?: { week: number; season: string; source: string; updatedAt: string } | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,7 +21,10 @@ export const Header: React.FC<HeaderProps> = ({
   columnCount,
   totalCostTL,
   onOpenAutoPlay,
-  onOpenStats
+  onOpenStats,
+  onRefreshBulletin,
+  isBulletinLoading,
+  bulletinMeta
 }) => {
   const tabs = [
     { id: 'coupon', label: 'Kupon & Formül', icon: Target },
@@ -52,7 +58,11 @@ export const Header: React.FC<HeaderProps> = ({
                   PRO
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-gray-400 truncate mt-0.5">Akıllı Spor Toto Platformu</p>
+              <p className="text-[10px] sm:text-[11px] text-gray-400 truncate mt-0.5">
+                {bulletinMeta
+                  ? `${bulletinMeta.season} • ${bulletinMeta.week}. Hafta`
+                  : 'Akıllı Spor Toto Platformu'}
+              </p>
             </div>
           </div>
 
@@ -80,6 +90,20 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Action Widgets */}
           <div className="flex items-center space-x-2 shrink-0">
+            {onRefreshBulletin && (
+              <button
+                onClick={onRefreshBulletin}
+                disabled={isBulletinLoading}
+                title={bulletinMeta ? `Bülten: ${bulletinMeta.source}\nGüncelleme: ${new Date(bulletinMeta.updatedAt).toLocaleString('tr-TR')}` : 'Bülteni yenile'}
+                className="p-2 text-gray-400 hover:text-emerald-400 bg-gray-900/80 border border-gray-800 hover:border-gray-700 rounded-xl transition-colors shrink-0 disabled:opacity-50"
+              >
+                {isBulletinLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+              </button>
+            )}
             {/* Quick Stat Pill with tabular numbers to prevent jitter */}
             <div className="hidden sm:flex flex-col items-end px-3 py-1 bg-gray-900/80 border border-gray-800 rounded-lg min-w-[130px]">
               <span className="text-[10px] text-gray-400 font-medium">Toplam Kolon / Tutar</span>
