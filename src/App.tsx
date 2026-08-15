@@ -7,6 +7,9 @@ import { ColumnViewer } from './components/ColumnViewer';
 import { MyCoupons } from './components/MyCoupons';
 import { TribunCommunity } from './components/TribunCommunity';
 import { MatchDetailModal } from './components/MatchDetailModal';
+import { AICouponWizard } from './components/AICouponWizard';
+import { CouponHeatmap } from './components/CouponHeatmap';
+import { CouponShareCardModal } from './components/CouponShareCardModal';
 import { AIValueRadar } from './components/AIValueRadar';
 import { PrizeCalculator } from './components/PrizeCalculator';
 import { LiveRadar } from './components/LiveRadar';
@@ -15,11 +18,12 @@ import { AutoPlayModal } from './components/AutoPlayModal';
 import { StatsModal } from './components/StatsModal';
 import { useTotoEngine } from './hooks/useTotoEngine';
 import { useLiveSimulator } from './hooks/useLiveSimulator';
-import { Column, Match, Outcome, SavedCoupon } from './core/types';
+import { Column, FilterConfig, FormulaType, GuaranteeTier, Match, Outcome, SavedCoupon } from './core/types';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('coupon');
   const [isAutoPlayOpen, setIsAutoPlayOpen] = useState<boolean>(false);
+  const [isShareCardOpen, setIsShareCardOpen] = useState<boolean>(false);
   const [autoPlayColumns, setAutoPlayColumns] = useState<Column[]>([]);
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
   const [selectedMatchForDetail, setSelectedMatchForDetail] = useState<Match | null>(null);
@@ -66,6 +70,26 @@ export function App() {
       return m;
     }));
     setActiveTab('coupon');
+  };
+
+  const handleApplyAIOptimization = ({
+    formulaType: newFormula,
+    guaranteeTier: newTier,
+    targetBudget: newBudget,
+    filters: newFilterOverrides,
+    picksModifier
+  }: {
+    formulaType: FormulaType;
+    guaranteeTier: GuaranteeTier;
+    targetBudget: number;
+    filters: Partial<FilterConfig>;
+    picksModifier: (matches: Match[]) => Match[];
+  }) => {
+    setFormulaType(newFormula);
+    setGuaranteeTier(newTier);
+    setTargetBudgetTL(newBudget);
+    setFilters(prev => ({ ...prev, ...newFilterOverrides }));
+    setMatches(prev => picksModifier(prev));
   };
 
   const handleApplyModalPick = (pick: Outcome | '1-X' | 'X-2' | '1-2' | '1-X-2') => {
@@ -121,6 +145,7 @@ export function App() {
           setIsAutoPlayOpen(true);
         }}
         onOpenStats={() => setIsStatsOpen(true)}
+        onOpenShareCard={() => setIsShareCardOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -128,6 +153,12 @@ export function App() {
         {/* Tab 1: Kupon & Formül (Primary Workspace) */}
         {activeTab === 'coupon' && (
           <div className="space-y-6">
+            {/* AI Smart Assistant & Auto Optimizer */}
+            <AICouponWizard
+              matches={matches}
+              onApplyAIOptimization={handleApplyAIOptimization}
+            />
+
             <FormulaSelector
               formulaType={formulaType}
               setFormulaType={setFormulaType}
@@ -158,6 +189,12 @@ export function App() {
               onApplyFilters={runCalculation}
             />
 
+            <CouponHeatmap
+              matches={matches}
+              columns={generatedColumns}
+              summary={calcSummary}
+            />
+
             <ColumnViewer
               columns={generatedColumns}
               matches={matches}
@@ -177,6 +214,11 @@ export function App() {
               filters={filters}
               setFilters={setFilters}
               onApplyFilters={runCalculation}
+            />
+            <CouponHeatmap
+              matches={matches}
+              columns={generatedColumns}
+              summary={calcSummary}
             />
             <ColumnViewer
               columns={generatedColumns}
@@ -272,6 +314,17 @@ export function App() {
         />
       )}
 
+      {/* Coupon Share & Printable Card Modal */}
+      <CouponShareCardModal
+        isOpen={isShareCardOpen}
+        onClose={() => setIsShareCardOpen(false)}
+        matches={matches}
+        columns={generatedColumns}
+        formulaType={formulaType}
+        guaranteeTier={guaranteeTier}
+        totalCostTL={calcSummary.totalCostTL}
+      />
+
       {/* Global Modals */}
       <AutoPlayModal
         isOpen={isAutoPlayOpen}
@@ -290,7 +343,7 @@ export function App() {
           <div className="flex items-center gap-2">
             <span className="font-extrabold text-white tracking-wider">HEDEF15 PRO ENTERPRISE</span>
             <span>•</span>
-            <span>Nesine, Mackolik ve Spor Toto'nun Güçlü Hibriti</span>
+            <span>Nesine, Mackolik ve Spor Toto Hibrit Platformu</span>
           </div>
           <div className="text-gray-400">
             Nesine, Misli, Bilyoner, Tuttur ile tam uyumlu Extra1X2 formatı

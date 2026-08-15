@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText, Flame } from 'lucide-react';
+import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText, Flame, Share2 } from 'lucide-react';
 
 export type ActiveTab = 'coupon' | 'filters' | 'my_coupons' | 'tribun' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
 
@@ -10,6 +10,7 @@ interface HeaderProps {
   totalCostTL: number;
   onOpenAutoPlay: () => void;
   onOpenStats: () => void;
+  onOpenShareCard?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,7 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   columnCount,
   totalCostTL,
   onOpenAutoPlay,
-  onOpenStats
+  onOpenStats,
+  onOpenShareCard
 }) => {
   const tabs = [
     { id: 'coupon', label: 'Kupon & Formül', icon: Target },
@@ -100,6 +102,17 @@ export const Header: React.FC<HeaderProps> = ({
               <Zap className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Otomatik Oyna</span>
             </button>
+
+            {/* Share Card Button */}
+            {onOpenShareCard && (
+              <button
+                onClick={onOpenShareCard}
+                title="Kupon Kartını Paylaş"
+                className="p-2 text-emerald-400 hover:text-white bg-gray-900/80 border border-gray-800 hover:border-emerald-500/40 rounded-xl transition-colors shrink-0"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Stats / Help Button */}
             <button
