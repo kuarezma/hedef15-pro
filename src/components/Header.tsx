@@ -1,7 +1,7 @@
 import React from 'react';
-import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText, Flame, Share2 } from 'lucide-react';
+import { Target, Zap, TrendingUp, DollarSign, Radio, Users, Sparkles, FileText, Flame, Share2, Trophy } from 'lucide-react';
 
-export type ActiveTab = 'coupon' | 'filters' | 'my_coupons' | 'tribun' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
+export type ActiveTab = 'coupon' | 'filters' | 'results' | 'my_coupons' | 'tribun' | 'ai_radar' | 'prize' | 'live' | 'syndicate';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -24,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const tabs = [
     { id: 'coupon', label: 'Kupon & Formül', icon: Target },
+    { id: 'results', label: 'Resmi Sonuçlar', icon: Trophy },
     { id: 'filters', label: 'Akıllı Filtreler', icon: Zap },
     { id: 'my_coupons', label: 'Kuponlarım & Yükle', icon: FileText },
     { id: 'tribun', label: 'Nesine Tribün', icon: Flame },

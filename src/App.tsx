@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header, ActiveTab } from './components/Header';
 import { FormulaSelector } from './components/FormulaSelector';
 import { MatchList } from './components/MatchList';
 import { FilterPanel } from './components/FilterPanel';
 import { ColumnViewer } from './components/ColumnViewer';
 import { MyCoupons } from './components/MyCoupons';
+import { OfficialResults } from './components/OfficialResults';
 import { TribunCommunity } from './components/TribunCommunity';
 import { MatchDetailModal } from './components/MatchDetailModal';
 import { AICouponWizard } from './components/AICouponWizard';
@@ -20,6 +21,8 @@ import { useTotoEngine } from './hooks/useTotoEngine';
 import { useLiveSimulator } from './hooks/useLiveSimulator';
 import { Column, FilterConfig, FormulaType, GuaranteeTier, Match, Outcome, SavedCoupon } from './core/types';
 
+const STORAGE_SAVED_COUPONS = 'hedef15_saved_coupons_v1';
+
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('coupon');
   const [isAutoPlayOpen, setIsAutoPlayOpen] = useState<boolean>(false);
@@ -27,6 +30,14 @@ export function App() {
   const [autoPlayColumns, setAutoPlayColumns] = useState<Column[]>([]);
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
   const [selectedMatchForDetail, setSelectedMatchForDetail] = useState<Match | null>(null);
+
+  const [savedCoupons, setSavedCoupons] = useState<SavedCoupon[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_SAVED_COUPONS);
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return [];
+  });
 
   const {
     matches,
@@ -225,7 +236,21 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 2: Akıllı Filtreler */}
+        {/* Tab 2: Resmi Sonuçlar & İkramiye Dağıtımı */}
+        {activeTab === 'results' && (
+          <div className="space-y-6">
+            <OfficialResults
+              matches={matches}
+              matchStatuses={liveSimulator.matchStatuses}
+              savedCoupons={savedCoupons}
+              currentColumns={generatedColumns}
+              onRefreshResults={liveSimulator.syncMackolikScores}
+              isRefreshing={liveSimulator.isFetchingLive}
+            />
+          </div>
+        )}
+
+        {/* Tab 3: Akıllı Filtreler */}
         {activeTab === 'filters' && (
           <div className="space-y-6">
             <FilterPanel
@@ -250,7 +275,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 3: Kuponlarım & Kupon Yükle */}
+        {/* Tab 4: Kuponlarım & Kupon Yükle */}
         {activeTab === 'my_coupons' && (
           <div className="space-y-6">
             <MyCoupons
@@ -266,7 +291,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 4: Nesine Tribün & Popüler Kuponlar */}
+        {/* Tab 5: Nesine Tribün & Popüler Kuponlar */}
         {activeTab === 'tribun' && (
           <div className="space-y-6">
             <TribunCommunity
@@ -276,7 +301,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 5: AI Değer Radarı */}
+        {/* Tab 6: AI Değer Radarı */}
         {activeTab === 'ai_radar' && (
           <div className="space-y-6">
             <AIValueRadar
@@ -295,14 +320,14 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 6: İkramiye Havuzu */}
+        {/* Tab 7: İkramiye Havuzu */}
         {activeTab === 'prize' && (
           <div className="space-y-6">
             <PrizeCalculator matches={matches} />
           </div>
         )}
 
-        {/* Tab 7: Canlı Maç Radarı */}
+        {/* Tab 8: Canlı Maç Radarı */}
         {activeTab === 'live' && (
           <div className="space-y-6">
             <LiveRadar
@@ -312,7 +337,7 @@ export function App() {
           </div>
         )}
 
-        {/* Tab 8: Ortak Kupon (Havuz) */}
+        {/* Tab 9: Ortak Kupon (Havuz) */}
         {activeTab === 'syndicate' && (
           <div className="space-y-6">
             <SyndicateShareModal
