@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Hedef15 Pro - Spor Toto Otomatik Oynatıcı",
+  "version": "1.0.0",
+  "description": "Hedef15 Pro'da üretilen Toto kolonlarını Nesine, Misli, Bilyoner ve Tuttur sitelerine tek tıkla otomatik doldurur.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "*://*.nesine.com/*",
+    "*://*.misli.com/*",
+    "*://*.bilyoner.com/*",
+    "*://*.tuttur.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Hedef15 Pro Otomatik Oyna"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.nesine.com/*sportoto*",
+        "*://*.misli.com/*sportoto*",
+        "*://*.bilyoner.com/*sportoto*",
+        "*://*.tuttur.com/*sportoto*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}
