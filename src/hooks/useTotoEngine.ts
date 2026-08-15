@@ -9,6 +9,8 @@ const STORAGE_KEY_FORMULA = 'hedef15_formula_v2';
 const STORAGE_KEY_TIER = 'hedef15_tier_v2';
 const STORAGE_KEY_BUDGET = 'hedef15_budget_v2';
 
+const CALC_DEBOUNCE_MS = 150;
+
 export function useTotoEngine() {
   const [matches, setMatches] = useState<Match[]>(() => {
     try {
@@ -123,7 +125,7 @@ export function useTotoEngine() {
     workerRef.current.postMessage(payload);
   }, [matches, formulaType, guaranteeTier, filters, targetBudgetTL, unitPriceTL]);
 
-  // Debounced auto-recalculate on changes (100ms debounce ensures fluid 60-120fps UI)
+  // Debounced auto-recalculate on changes
   useEffect(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -131,7 +133,7 @@ export function useTotoEngine() {
 
     debounceTimerRef.current = setTimeout(() => {
       runCalculation();
-    }, 100);
+    }, CALC_DEBOUNCE_MS);
 
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -198,6 +200,9 @@ export function useTotoEngine() {
             '2': sorted[0].out === '2' || sorted[1].out === '2'
           }
         };
+      } else if (presetName === 'CLEAR_ALL') {
+        const initial = INITIAL_MATCHES.find(im => im.id === m.id);
+        return initial ? { ...m, userPicks: { ...initial.userPicks } } : m;
       } else if (presetName === 'DOUBLE_SURPRISE') {
         return {
           ...m,

@@ -37,20 +37,25 @@ export function generateCartesianProduct(matches: Match[], maxLimit = 250000): C
     console.warn(`Total combinations (${totalCount}) exceeds safety threshold (${maxLimit}). Truncating combinations.`);
   }
 
+  // Iterative generation without spread-allocation churn for large universes
   let result: Column[] = [[]];
 
   for (let matchIdx = 0; matchIdx < 15; matchIdx++) {
     const currentChoices = choices[matchIdx];
     const nextResult: Column[] = [];
+    nextResult.length = Math.min(result.length * currentChoices.length, maxLimit);
 
-    for (const prefix of result) {
-      for (const choice of currentChoices) {
-        nextResult.push([...prefix, choice]);
-        if (nextResult.length >= maxLimit) {
-          return nextResult;
-        }
+    let writeIdx = 0;
+    outer: for (let p = 0; p < result.length; p++) {
+      const prefix = result[p];
+      for (let c = 0; c < currentChoices.length; c++) {
+        if (writeIdx >= maxLimit) break outer;
+        const col = prefix.slice();
+        col.push(currentChoices[c]);
+        nextResult[writeIdx++] = col;
       }
     }
+    nextResult.length = writeIdx;
     result = nextResult;
   }
 

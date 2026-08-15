@@ -1,8 +1,21 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Column, LiveMatchStatus, LiveRadarState, Match, Outcome } from '../core/types';
-import { countMatches } from '../core/combinatorics';
+
+/** Cap columns evaluated in live radar to keep UI responsive */
+const MAX_LIVE_RADAR_COLUMNS = 2500;
+
+function sampleColumnsForLiveRadar(columns: Column[]): Column[] {
+  if (columns.length <= MAX_LIVE_RADAR_COLUMNS) return columns;
+  const step = Math.ceil(columns.length / MAX_LIVE_RADAR_COLUMNS);
+  const sampled: Column[] = [];
+  for (let i = 0; i < columns.length; i += step) {
+    sampled.push(columns[i]);
+  }
+  return sampled;
+}
 
 export function useLiveSimulator(matches: Match[], columns: Column[]) {
+  const evaluatedColumns = useMemo(() => sampleColumnsForLiveRadar(columns), [columns]);
   const [isLiveRunning, setIsLiveRunning] = useState<boolean>(false);
   const [matchStatuses, setMatchStatuses] = useState<LiveMatchStatus[]>(() => {
     return matches.map(m => ({
@@ -32,7 +45,7 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     let count12 = 0;
     let lost = 0;
 
-    const columnGrades = columns.map(col => {
+    const columnGrades = evaluatedColumns.map(col => {
       let currentHits = 0;
       let finishedMismatches = 0;
 
@@ -86,7 +99,7 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
         lost
       }
     };
-  }, [columns, currentOutcomes, matchStatuses]);
+  }, [evaluatedColumns, currentOutcomes, matchStatuses]);
 
   // Random simulation tick
   const stepSimulation = useCallback(() => {
