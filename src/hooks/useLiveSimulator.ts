@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Column, LiveMatchStatus, LiveRadarState, Match, Outcome } from '../core/types';
 import { fetchLiveScoresFromMackolik, getInitialWeekendStatuses, GoalEvent } from '../core/mackolikService';
 import { playGoalSound } from '../core/goalAudio';
+import { isFinishedStatus } from '../core/matchStatus';
 
 /** Cap columns evaluated in live radar to keep UI responsive */
 const MAX_LIVE_RADAR_COLUMNS = 2500;
@@ -18,19 +19,25 @@ function sampleColumnsForLiveRadar(columns: Column[]): Column[] {
 
 export function useLiveSimulator(matches: Match[], columns: Column[]) {
   const evaluatedColumns = useMemo(() => sampleColumnsForLiveRadar(columns), [columns]);
-  const [isLiveRunning, setIsLiveRunning] = useState<boolean>(false);
+  const [isLiveRunning, setIsLiveRunning] = useState<boolean>(true);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [isBrowserNotifEnabled, setIsBrowserNotifEnabled] = useState<boolean>(false);
-  const [autoPollInterval, setAutoPollInterval] = useState<number>(15);
+  const [autoPollInterval, setAutoPollInterval] = useState<number>(30);
   const [recentGoals, setRecentGoals] = useState<GoalEvent[]>([]);
   const [activeGoalToast, setActiveGoalToast] = useState<GoalEvent | null>(null);
   const [isFetchingLive, setIsFetchingLive] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   const [matchStatuses, setMatchStatuses] = useState<LiveMatchStatus[]>(() => {
     return getInitialWeekendStatuses(matches);
   });
 
-  // Request browser notification permission
+  const matchStatusesRef = useRef(matchStatuses);
+  matchStatusesRef.current = matchStatuses;
+  const matchesRef = useRef(matches);
+  matchesRef.current = matches;
+
   const requestBrowserNotificationPermission = useCallback(async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       const perm = await Notification.requestPermission();
@@ -40,16 +47,10 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     return false;
   }, []);
 
-  // Calculate live outcomes (1, X, 2)
-  const currentOutcomes: Outcome[] = useMemo(() => {
-    return matchStatuses.map(m => {
-      if (m.homeScore > m.awayScore) return '1';
-      if (m.homeScore < m.awayScore) return '2';
-      return 'X';
-    });
+  const currentOutcomes: Array<Outcome | null> = useMemo(() => {
+    return matchStatuses.map(m => m.currentOutcome);
   }, [matchStatuses]);
 
-  // Evaluates every column against current live status
   const radarState: LiveRadarState = useMemo(() => {
     let count15 = 0;
     let count14 = 0;
@@ -63,11 +64,11 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
 
       for (let i = 0; i < 15; i++) {
         const liveOut = currentOutcomes[i];
-        const status = matchStatuses[i].status;
+        const status = matchStatuses[i];
 
-        if (col[i] === liveOut) {
+        if (liveOut && col[i] === liveOut) {
           currentHits++;
-        } else if (status === 'FINISHED') {
+        } else if (isFinishedStatus(status) && liveOut && col[i] !== liveOut) {
           finishedMismatches++;
         }
       }
@@ -112,24 +113,27 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     };
   }, [evaluatedColumns, currentOutcomes, matchStatuses]);
 
-  // Fetch / Advance live scores
   const syncMackolikScores = useCallback(async () => {
     setIsFetchingLive(true);
     try {
-      const { statuses, newGoals } = await fetchLiveScoresFromMackolik(matches, matchStatuses);
+      const { statuses, newGoals } = await fetchLiveScoresFromMackolik(
+        matchesRef.current,
+        matchStatusesRef.current
+      );
       setMatchStatuses(statuses);
+      matchStatusesRef.current = statuses;
+      setLastSyncedAt(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setSyncError(null);
 
       if (newGoals.length > 0) {
         setRecentGoals(prev => [...newGoals, ...prev].slice(0, 15));
         const latestGoal = newGoals[0];
         setActiveGoalToast(latestGoal);
 
-        // Sound alert
         if (isSoundEnabled) {
           playGoalSound();
         }
 
-        // Browser push notification
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
           try {
             new Notification(`⚽ GOL! ${latestGoal.scoringTeam}`, {
@@ -143,39 +147,47 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
           setActiveGoalToast(prev => (prev?.id === latestGoal.id ? null : prev));
         }, 6000);
       }
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Canlı skorlar alınamadı');
     } finally {
       setIsFetchingLive(false);
     }
-  }, [matches, matchStatuses, isSoundEnabled]);
+  }, [isSoundEnabled]);
 
-  // Auto-polling interval
+  const fixtureKey = useMemo(
+    () => matches.map(m => `${m.id}:${m.homeTeam}:${m.awayTeam}`).join('|'),
+    [matches]
+  );
+
+  useEffect(() => {
+    const reset = getInitialWeekendStatuses(matchesRef.current);
+    setMatchStatuses(reset);
+    matchStatusesRef.current = reset;
+  }, [fixtureKey]);
+
+  useEffect(() => {
+    void syncMackolikScores();
+  }, [fixtureKey, syncMackolikScores]);
+
   useEffect(() => {
     if (!isLiveRunning || autoPollInterval <= 0) return;
 
     const timer = setInterval(() => {
-      syncMackolikScores();
+      void syncMackolikScores();
     }, autoPollInterval * 1000);
 
     return () => clearInterval(timer);
   }, [isLiveRunning, autoPollInterval, syncMackolikScores]);
 
-  // Manual fast forward to full-time
-  const fastForwardToFinish = useCallback(() => {
-    setMatchStatuses(prev => prev.map(m => ({
-      ...m,
-      minute: 90,
-      status: 'FINISHED'
-    })));
-    setIsLiveRunning(false);
-  }, []);
-
-  // Reset simulation
-  const resetSimulation = useCallback(() => {
-    setIsLiveRunning(false);
+  const resetLiveTracking = useCallback(() => {
+    const reset = getInitialWeekendStatuses(matchesRef.current);
+    setMatchStatuses(reset);
+    matchStatusesRef.current = reset;
     setRecentGoals([]);
     setActiveGoalToast(null);
-    setMatchStatuses(getInitialWeekendStatuses(matches));
-  }, [matches]);
+    setSyncError(null);
+    void syncMackolikScores();
+  }, [syncMackolikScores]);
 
   return {
     isLiveRunning,
@@ -192,9 +204,10 @@ export function useLiveSimulator(matches: Match[], columns: Column[]) {
     recentGoals,
     activeGoalToast,
     isFetchingLive,
+    syncError,
+    lastSyncedAt,
     syncMackolikScores,
-    resetSimulation,
-    fastForwardToFinish,
+    resetSimulation: resetLiveTracking,
     dismissGoalToast: () => setActiveGoalToast(null)
   };
 }

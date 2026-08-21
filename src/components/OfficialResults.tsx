@@ -3,19 +3,14 @@ import { Column, LiveMatchStatus, Match, Outcome, SavedCoupon } from '../core/ty
 import { countMatches } from '../core/combinatorics';
 import {
   Trophy,
-  CheckCircle2,
-  Calendar,
-  DollarSign,
   Award,
   Sparkles,
-  RefreshCw,
-  Search,
-  ExternalLink,
-  ChevronRight,
-  TrendingUp,
-  AlertCircle
+  RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { displayOdds, findMatchStatus, isFinishedStatus, isLiveStatus, statusLabel } from '../core/matchStatus';
+import { getFavoriteOutcome } from '../core/valueEngine';
+import { allMatchesFinished } from '../core/mackolikService';
 
 interface OfficialResultsProps {
   matches: Match[];
@@ -34,7 +29,7 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
   onRefreshResults,
   isRefreshing
 }) => {
-  const [selectedWeek, setSelectedWeek] = useState<string>('2026_w1');
+  const [selectedWeek, setSelectedWeek] = useState<string>('2026_w2');
   const [couponCheckResult, setCouponCheckResult] = useState<{
     totalChecked: number;
     hits15: number;
@@ -44,12 +39,15 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
     estimatedWonTL: number;
   } | null>(null);
 
-  // Extract official outcomes
-  const officialOutcomes: Outcome[] = matchStatuses.map(s => s.currentOutcome);
+  const officialOutcomes: Array<Outcome | null> = matches.map(m => {
+    const status = findMatchStatus(matchStatuses, m.id);
+    return isFinishedStatus(status) ? status?.currentOutcome ?? null : null;
+  });
 
-  const finishedCount = matchStatuses.filter(s => s.status === 'FINISHED' || s.minute >= 90).length;
-  const liveCount = matchStatuses.filter(s => s.minute > 0 && s.minute < 90).length;
-  const scheduledCount = 15 - finishedCount - liveCount;
+  const finishedCount = matchStatuses.filter(isFinishedStatus).length;
+  const liveCount = matchStatuses.filter(isLiveStatus).length;
+  const scheduledCount = matches.length - finishedCount - liveCount;
+  const resultsComplete = allMatchesFinished(matchStatuses);
 
   // Official prize pool estimates for the week
   const prizePool = {
@@ -62,26 +60,37 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
   };
 
   const handleCheckAllCoupons = () => {
+    if (!resultsComplete) {
+      setCouponCheckResult({
+        totalChecked: 0,
+        hits15: 0,
+        hits14: 0,
+        hits13: 0,
+        hits12: 0,
+        estimatedWonTL: 0
+      });
+      return;
+    }
+
+    const resolvedOutcomes = officialOutcomes as Outcome[];
     let hits15 = 0;
     let hits14 = 0;
     let hits13 = 0;
     let hits12 = 0;
     let totalCols = currentColumns.length;
 
-    // Check currently generated columns
     for (const col of currentColumns) {
-      const matchCount = countMatches(col, officialOutcomes);
+      const matchCount = countMatches(col, resolvedOutcomes);
       if (matchCount === 15) hits15++;
       else if (matchCount === 14) hits14++;
       else if (matchCount === 13) hits13++;
       else if (matchCount === 12) hits12++;
     }
 
-    // Check all saved coupons
     for (const sc of savedCoupons) {
       totalCols += sc.columns.length;
       for (const col of sc.columns) {
-        const matchCount = countMatches(col, officialOutcomes);
+        const matchCount = countMatches(col, resolvedOutcomes);
         if (matchCount === 15) hits15++;
         else if (matchCount === 14) hits14++;
         else if (matchCount === 13) hits13++;
@@ -141,9 +150,8 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
             onChange={(e) => setSelectedWeek(e.target.value)}
             className="bg-gray-900 border border-gray-700 text-xs font-bold text-white rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer"
           >
-            <option value="2026_w1">2026/2027 Sezonu 1. Hafta (Güncel)</option>
-            <option value="2025_w42">2025/2026 Sezonu 42. Hafta (Arşiv)</option>
-            <option value="2025_w41">2025/2026 Sezonu 41. Hafta (Devirli)</option>
+            <option value="2026_w2">2026/2027 Sezonu 2. Hafta (Güncel)</option>
+            <option value="2026_w1">2026/2027 Sezonu 1. Hafta (Arşiv)</option>
           </select>
 
           <button
@@ -172,10 +180,11 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
 
         <button
           onClick={handleCheckAllCoupons}
-          className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+          disabled={!resultsComplete}
+          className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
         >
           <Award className="w-4 h-4 text-amber-300" />
-          <span>Kuponlarımı Sorgula & Kazancımı Gör</span>
+          <span>{resultsComplete ? 'Kuponlarımı Sorgula & Kazancımı Gör' : `Resmi sonuç için ${15 - finishedCount} maç bekleniyor`}</span>
         </button>
       </div>
 
@@ -239,10 +248,12 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
           </div>
 
           <div className="space-y-2">
-            {matches.map((m, idx) => {
-              const status = matchStatuses[idx];
-              const isFinished = status?.status === 'FINISHED' || (status?.minute ?? 0) >= 90;
-              const isLive = (status?.minute ?? 0) > 0 && !isFinished;
+            {matches.map((m) => {
+              const status = findMatchStatus(matchStatuses, m.id);
+              const isFinished = isFinishedStatus(status);
+              const isLive = isLiveStatus(status);
+              const odds = displayOdds(status, m.odds);
+              const favorite = status?.favoriteOutcome ?? getFavoriteOutcome(odds);
 
               return (
                 <div
@@ -269,27 +280,37 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
                     </div>
                   </div>
 
-                  {/* Status & Official Score */}
                   <div className="flex items-center gap-2.5 shrink-0">
-                    <div className="text-right font-mono">
-                      <div className="text-xs sm:text-sm font-black text-white tabular-nums">
-                        {status ? `${status.homeScore} - ${status.awayScore}` : '0 - 0'}
+                    {isFinished || isLive ? (
+                      <>
+                        <div className="text-right font-mono">
+                          <div className="text-xs sm:text-sm font-black text-white tabular-nums">
+                            {status ? `${status.homeScore} - ${status.awayScore}` : '—'}
+                          </div>
+                          <div className="text-[9px] text-gray-400 font-sans">
+                            {statusLabel(status)}
+                          </div>
+                        </div>
+                        <span className={`w-8 h-8 rounded-xl font-mono font-black text-xs flex items-center justify-center shrink-0 ${
+                          status?.currentOutcome === '1'
+                            ? 'bg-emerald-500 text-white shadow-sm'
+                            : status?.currentOutcome === 'X'
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'bg-cyan-500 text-white shadow-sm'
+                        }`}>
+                          {status?.currentOutcome ?? '—'}
+                        </span>
+                      </>
+                    ) : (
+                      <div className="text-right">
+                        <div className="text-[10px] font-black text-blue-300">
+                          En olası {favorite} ★
+                        </div>
+                        <div className="text-[10px] font-mono text-gray-400">
+                          {odds[favorite].toFixed(2)} • %{Math.round(status?.favoriteImpliedPct || 0)}
+                        </div>
                       </div>
-                      <div className="text-[9px] text-gray-400 font-sans">
-                        {isFinished ? 'MS (Bitti)' : isLive ? `${status.minute}' Canlı` : 'Başlamadı'}
-                      </div>
-                    </div>
-
-                    {/* Winning Outcome Badge */}
-                    <span className={`w-8 h-8 rounded-xl font-mono font-black text-xs flex items-center justify-center shrink-0 ${
-                      status?.currentOutcome === '1'
-                        ? 'bg-emerald-500 text-white shadow-sm'
-                        : status?.currentOutcome === 'X'
-                        ? 'bg-amber-500 text-white shadow-sm'
-                        : 'bg-cyan-500 text-white shadow-sm'
-                    }`}>
-                      {status?.currentOutcome ?? 'X'}
-                    </span>
+                    )}
                   </div>
                 </div>
               );
@@ -306,7 +327,7 @@ export const OfficialResults: React.FC<OfficialResultsProps> = ({
                 <p className="text-xs text-gray-400">Spor Toto Teşkilat Başkanlığı Resmi Havuz</p>
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                1. Hafta
+                2. Hafta
               </span>
             </div>
 

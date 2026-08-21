@@ -1,9 +1,23 @@
-import { Match, Outcome, ValueBetAnalysis } from './types';
+import { Match, MatchOdds, Outcome, ValueBetAnalysis } from './types';
 
 /**
  * AI Value Arbitrage & Odds Discrepancy Engine.
  * Finds outcomes where the public under-bets relative to true mathematical probability.
  */
+
+/** Lowest decimal odds = highest implied probability (İddaa favorite). */
+export function getFavoriteOutcome(odds: MatchOdds): Outcome {
+  let favorite: Outcome = '1';
+  let lowest = odds['1'];
+  if (odds['X'] < lowest) {
+    lowest = odds['X'];
+    favorite = 'X';
+  }
+  if (odds['2'] < lowest) {
+    favorite = '2';
+  }
+  return favorite;
+}
 
 export function calculateImpliedProbabilities(odds: { '1': number; 'X': number; '2': number }): { '1': number; 'X': number; '2': number } {
   const o1 = odds['1'] > 1 ? 1 / odds['1'] : 0;

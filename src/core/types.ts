@@ -140,17 +140,27 @@ export interface PrizeSimulation {
   };
 }
 
+export type MatchPlayStatus = 'SCHEDULED' | 'LIVE' | 'HALFTIME' | 'FINISHED' | 'POSTPONED';
+
 export interface LiveMatchStatus {
   matchId: number;
   homeScore: number;
   awayScore: number;
-  minute: number; // 0-90 or 90 for FT
-  status: 'SCHEDULED' | 'LIVE' | 'HALFTIME' | 'FINISHED';
-  currentOutcome: Outcome;
+  minute: number; // 0-90+, informational only — do not treat 90 as finished
+  displayClock: string;
+  status: MatchPlayStatus;
+  /** 1/X/2 only after kickoff. Null before the match starts (never fake 0-0 as X). */
+  currentOutcome: Outcome | null;
+  /** Lowest-odds (highest implied probability) 1X2 market pick */
+  favoriteOutcome: Outcome;
+  favoriteImpliedPct: number;
+  marketOdds?: MatchOdds;
+  kickoffIso?: string;
+  matched: boolean;
 }
 
 export interface LiveRadarState {
-  currentOutcomes: Outcome[];
+  currentOutcomes: Array<Outcome | null>;
   columnGrades: {
     column: Column;
     currentHits: number;

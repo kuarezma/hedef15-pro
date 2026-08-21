@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { FormulaType, LiveMatchStatus, Match } from '../core/types';
 import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame, BarChart2, Lock, Radio, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { displayOdds, findMatchStatus, isFinishedStatus, isLiveStatus, isScheduledStatus, statusLabel } from '../core/matchStatus';
+import { calculateImpliedProbabilities, getFavoriteOutcome } from '../core/valueEngine';
 
 interface MatchListProps {
   matches: Match[];
@@ -42,24 +44,26 @@ export const MatchList: React.FC<MatchListProps> = ({
     let finished = 0, live = 0, scheduled = 0;
     if (matchStatuses) {
       matchStatuses.forEach(s => {
-        if (s.status === 'FINISHED' || s.minute >= 90) finished++;
-        else if (s.minute > 0) live++;
+        if (isFinishedStatus(s)) finished++;
+        else if (isLiveStatus(s)) live++;
         else scheduled++;
       });
+    } else {
+      scheduled = matches.length;
     }
     return { finished, live, scheduled };
-  }, [matchStatuses]);
+  }, [matchStatuses, matches.length]);
 
   const filteredMatches = useMemo(() => {
-    return matches.filter((m, idx) => {
+    return matches.filter((m) => {
       const matchText = `${m.homeTeam} ${m.awayTeam} ${m.league}`.toLowerCase();
       const matchesSearch = searchQuery === '' || matchText.includes(searchQuery.toLowerCase());
       const matchesLeague = selectedLeague === 'ALL' || m.league === selectedLeague;
 
-      const status = matchStatuses ? matchStatuses[idx] : undefined;
-      const isFinished = status?.status === 'FINISHED' || (status?.minute ?? 0) >= 90;
-      const isLive = (status?.minute ?? 0) > 0 && !isFinished;
-      const isScheduled = !isFinished && !isLive;
+      const status = findMatchStatus(matchStatuses, m.id);
+      const isFinished = isFinishedStatus(status);
+      const isLive = isLiveStatus(status);
+      const isScheduled = isScheduledStatus(status);
 
       let matchesState = true;
       if (matchStateFilter === 'LIVE') matchesState = isLive;
@@ -123,7 +127,7 @@ export const MatchList: React.FC<MatchListProps> = ({
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
-            İstediğiniz maça tıklayarak Mackolik maç merkezini (H2H, puan durumu, sakatlar) inceleyebilir ve tek/çifte/kapalı tercih yapabilirsiniz.
+            İstediğiniz maça tıklayarak maç merkezini inceleyebilir, başlamayan maçlarda en olası iddaa oranını görebilir ve tek/çifte/kapalı tercih yapabilirsiniz.
           </p>
         </div>
 
@@ -236,7 +240,6 @@ export const MatchList: React.FC<MatchListProps> = ({
       {/* Match Table / List */}
       <div className="space-y-2">
         {filteredMatches.map((match) => {
-          const matchIndex = matches.findIndex(m => m.id === match.id);
           const selectedCount = (match.userPicks['1'] ? 1 : 0) + (match.userPicks['X'] ? 1 : 0) + (match.userPicks['2'] ? 1 : 0);
           const pickTypeBadge = selectedCount === 1 ? 'Tek' : selectedCount === 2 ? 'Çifte' : 'Kapalı (3)';
           const badgeColor = selectedCount === 1
@@ -245,9 +248,11 @@ export const MatchList: React.FC<MatchListProps> = ({
             ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
             : 'bg-purple-500/10 text-purple-400 border-purple-500/30';
 
-          const liveStatus = matchStatuses ? matchStatuses[matchIndex] : undefined;
-          const isFinished = liveStatus?.status === 'FINISHED' || (liveStatus?.minute ?? 0) >= 90;
-          const isLive = (liveStatus?.minute ?? 0) > 0 && !isFinished;
+          const liveStatus = findMatchStatus(matchStatuses, match.id);
+          const isFinished = isFinishedStatus(liveStatus);
+          const isLive = isLiveStatus(liveStatus);
+          const odds = displayOdds(liveStatus, match.odds);
+          const favorite = liveStatus?.favoriteOutcome ?? getFavoriteOutcome(odds);
 
           return (
             <div
@@ -293,9 +298,13 @@ export const MatchList: React.FC<MatchListProps> = ({
                     ) : isLive ? (
                       <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 font-mono tabular-nums flex items-center gap-1 animate-pulse">
                         <Flame className="w-3.5 h-3.5 text-amber-400" />
-                        <span>{liveStatus?.minute}' Canlı: {liveStatus?.homeScore} - {liveStatus?.awayScore}</span>
+                        <span>{statusLabel(liveStatus)}: {liveStatus?.homeScore} - {liveStatus?.awayScore}</span>
                       </span>
-                    ) : null}
+                    ) : (
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 font-mono tabular-nums">
+                        En olası: {favorite} ({odds[favorite].toFixed(2)}) %{Math.round(liveStatus?.favoriteImpliedPct || calculateImpliedProbabilities(odds)[favorite])}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-[10px] sm:text-[11px] text-gray-400 truncate">
                     <span>{match.league}</span>
@@ -313,7 +322,7 @@ export const MatchList: React.FC<MatchListProps> = ({
                 <div className="text-center min-w-[100px]">
                   <div className="text-[10px] text-gray-500 font-semibold">Piyasa Oranları</div>
                   <div className="font-mono font-medium text-gray-300 tabular-nums">
-                    {match.odds['1'].toFixed(2)} | {match.odds['X'].toFixed(2)} | {match.odds['2'].toFixed(2)}
+                    {odds['1'].toFixed(2)} | {odds['X'].toFixed(2)} | {odds['2'].toFixed(2)}
                   </div>
                 </div>
                 <div className="text-center min-w-[110px]">
@@ -346,9 +355,10 @@ export const MatchList: React.FC<MatchListProps> = ({
                 <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
                   {(['1', 'X', '2'] as const).map(out => {
                     const isSelected = match.userPicks[out];
-                    const odd = match.odds[out];
+                    const odd = odds[out];
                     const isWinningOutcome = isFinished && liveStatus?.currentOutcome === out;
                     const isLiveLeading = isLive && liveStatus?.currentOutcome === out;
+                    const isFavoritePick = !isFinished && favorite === out;
 
                     return (
                       <button
@@ -359,6 +369,8 @@ export const MatchList: React.FC<MatchListProps> = ({
                             ? 'ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/30'
                             : isLiveLeading
                             ? 'ring-1 ring-amber-400 shadow-sm'
+                            : isFavoritePick
+                            ? 'ring-1 ring-amber-400/70'
                             : ''
                         } ${
                           isSelected
@@ -373,6 +385,9 @@ export const MatchList: React.FC<MatchListProps> = ({
                           )}
                           {isLiveLeading && (
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
+                          )}
+                          {isFavoritePick && !isWinningOutcome && (
+                            <span className="text-[8px] text-amber-300">★</span>
                           )}
                         </div>
                         <span className={`text-[9px] font-mono tabular-nums mt-0.5 ${isSelected ? 'text-emerald-100' : 'text-gray-500'}`}>
