@@ -6,7 +6,6 @@ import {
   Play,
   Pause,
   RotateCcw,
-  FastForward,
   Flame,
   Volume2,
   VolumeX,
@@ -16,6 +15,8 @@ import {
   Bell,
   CheckCircle2
 } from 'lucide-react';
+import { displayOdds, findMatchStatus, isFinishedStatus, isLiveStatus, statusLabel } from '../core/matchStatus';
+import { getFavoriteOutcome } from '../core/valueEngine';
 
 interface LiveRadarProps {
   matches: Match[];
@@ -37,8 +38,9 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
     isFetchingLive,
     syncMackolikScores,
     resetSimulation,
-    fastForwardToFinish,
-    dismissGoalToast
+    dismissGoalToast,
+    lastSyncedAt,
+    syncError
   } = simulator;
 
   return (
@@ -86,8 +88,12 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
               </span>
             </div>
             <p className="text-xs text-gray-400 mt-0.5">
-              Mackolik canlı skorlarıyla entegre çalışır; gol olduğunda anında sesli bildirim verir ve kupon derecelerinizi hesaplar.
+              Gerçek dünya skorları canlı skor tablosundan çekilir. Simülasyon yok; gol olursa bildirim gelir, başlamayan maçlarda en olası iddaa oranı gösterilir.
+              {lastSyncedAt ? ` Son güncelleme: ${lastSyncedAt}` : ''}
             </p>
+            {syncError && (
+              <p className="text-[11px] text-red-400 mt-1">Skor kaynağına ulaşılamadı: {syncError}</p>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -131,7 +137,7 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
               </select>
             </div>
 
-            {/* Play / Pause Simulation */}
+            {/* Play / Pause live polling */}
             <button
               onClick={() => setIsLiveRunning(prev => !prev)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shrink-0 ${
@@ -141,24 +147,14 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
               }`}
             >
               {isLiveRunning ? <Pause className="w-3.5 h-3.5 shrink-0" /> : <Play className="w-3.5 h-3.5 shrink-0" />}
-              <span className="whitespace-nowrap">{isLiveRunning ? 'Durdur' : 'Canlı Başlat'}</span>
+              <span className="whitespace-nowrap">{isLiveRunning ? 'Takibi Durdur' : 'Canlı Takip'}</span>
             </button>
 
-            {/* Finish FT */}
-            <button
-              onClick={fastForwardToFinish}
-              className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1 active:scale-95 shrink-0"
-              title="Tüm maçları 90. dakikada bitir"
-            >
-              <FastForward className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-              <span>Bitir (FT)</span>
-            </button>
-
-            {/* Reset */}
+            {/* Reset / re-fetch real scores */}
             <button
               onClick={resetSimulation}
               className="p-2 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl border border-gray-700 transition-colors shrink-0 active:scale-95"
-              title="Sıfırla"
+              title="Gerçek skorları yeniden çek"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -215,10 +211,12 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
             <span>15 Spor Toto Maçının Anlık Skorları</span>
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {matches.map((m, idx) => {
-              const status = matchStatuses[idx];
-              const isLive = status.minute > 0 && status.minute < 90;
-              const isFinished = status.minute >= 90;
+            {matches.map((m) => {
+              const status = findMatchStatus(matchStatuses, m.id);
+              const isLive = isLiveStatus(status);
+              const isFinished = isFinishedStatus(status);
+              const odds = displayOdds(status, m.odds);
+              const favorite = status?.favoriteOutcome ?? getFavoriteOutcome(odds);
 
               return (
                 <div
@@ -243,15 +241,15 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
                         {isFinished ? (
                           <span className="text-emerald-400 font-semibold flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" />
-                            MS (Bitti: {status.currentOutcome})
+                            MS (Bitti: {status?.currentOutcome})
                           </span>
                         ) : isLive ? (
                           <span className="text-emerald-400 font-bold font-mono tabular-nums flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
-                            {status.minute}' Canlı
+                            {statusLabel(status)}
                           </span>
                         ) : (
-                          <span>{m.matchDate} {m.matchTime}</span>
+                          <span>En olası {favorite} ({odds[favorite].toFixed(2)})</span>
                         )}
                         <span className="text-gray-600">•</span>
                         <span className="text-gray-500">{m.league}</span>
@@ -260,18 +258,26 @@ export const LiveRadar: React.FC<LiveRadarProps> = ({ matches, simulator }) => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="font-mono text-xs sm:text-sm font-black text-white bg-gray-900 px-2 py-1 rounded-lg border border-gray-800 min-w-[48px] text-center tabular-nums">
-                      {status.homeScore} - {status.awayScore}
-                    </div>
-                    <span className={`w-6 h-6 rounded-lg font-mono font-extrabold text-xs flex items-center justify-center shrink-0 ${
-                      status.currentOutcome === '1'
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : status.currentOutcome === 'X'
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                        : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                    }`}>
-                      {status.currentOutcome}
-                    </span>
+                    {isFinished || isLive ? (
+                      <>
+                        <div className="font-mono text-xs sm:text-sm font-black text-white bg-gray-900 px-2 py-1 rounded-lg border border-gray-800 min-w-[48px] text-center tabular-nums">
+                          {status?.homeScore ?? 0} - {status?.awayScore ?? 0}
+                        </div>
+                        <span className={`w-6 h-6 rounded-lg font-mono font-extrabold text-xs flex items-center justify-center shrink-0 ${
+                          status?.currentOutcome === '1'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : status?.currentOutcome === 'X'
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                        }`}>
+                          {status?.currentOutcome ?? '—'}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-blue-500/15 text-blue-300 border border-blue-500/30 font-mono">
+                        {favorite} ★
+                      </span>
+                    )}
                   </div>
                 </div>
               );

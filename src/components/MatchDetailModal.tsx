@@ -1,34 +1,33 @@
 import React, { useState } from 'react';
-import { Match, Outcome } from '../core/types';
+import { LiveMatchStatus, Match, Outcome } from '../core/types';
 import { MATCH_DETAILS_DATA, MatchDetailInfo } from '../data/matchDetailsData';
 import {
   X,
-  TrendingUp,
-  Award,
-  Shield,
   AlertTriangle,
-  Flame,
-  CheckCircle2,
   Calendar,
-  Layers,
-  ChevronRight,
-  Sparkles,
-  PieChart
+  Sparkles
 } from 'lucide-react';
+import { displayOdds, isFinishedStatus, isLiveStatus, statusLabel } from '../core/matchStatus';
+import { calculateImpliedProbabilities, getFavoriteOutcome } from '../core/valueEngine';
 
 interface MatchDetailModalProps {
   match: Match;
+  liveStatus?: LiveMatchStatus;
   onClose: () => void;
   onApplyPick: (outcome: Outcome | '1-X' | 'X-2' | '1-2' | '1-X-2') => void;
 }
 
 export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   match,
+  liveStatus,
   onClose,
   onApplyPick
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'h2h' | 'standings' | 'squad'>('overview');
   const detail: MatchDetailInfo | undefined = MATCH_DETAILS_DATA[match.id];
+  const odds = displayOdds(liveStatus, match.odds);
+  const favorite = liveStatus?.favoriteOutcome ?? getFavoriteOutcome(odds);
+  const implied = calculateImpliedProbabilities(odds);
 
   const renderFormBadge = (result: 'W' | 'D' | 'L') => {
     if (result === 'W') {
@@ -52,6 +51,7 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
               </span>
               <span className="text-xs text-gray-400">
                 {match.matchDate} {match.matchTime}
+                {liveStatus ? ` • ${statusLabel(liveStatus)}` : ''}
               </span>
             </div>
             <h2 className="text-base sm:text-lg font-black text-white truncate tracking-wide">
@@ -69,22 +69,39 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
 
         {/* Odds & Distribution Bar */}
         <div className="grid grid-cols-3 gap-2 p-3 bg-gray-950/60 border-b border-gray-800/80 text-center font-mono">
-          <div className="bg-gray-900/80 p-2 rounded-xl border border-gray-800/80">
-            <div className="text-[10px] text-gray-500 font-sans font-bold">1 (Ev Sahibi)</div>
-            <div className="text-sm font-black text-emerald-400 tabular-nums">{match.odds['1'].toFixed(2)}</div>
-            <div className="text-[9px] text-gray-400 font-sans">Halk: %{match.publicPicks['1']}</div>
-          </div>
-          <div className="bg-gray-900/80 p-2 rounded-xl border border-gray-800/80">
-            <div className="text-[10px] text-gray-500 font-sans font-bold">X (Beraberlik)</div>
-            <div className="text-sm font-black text-amber-400 tabular-nums">{match.odds['X'].toFixed(2)}</div>
-            <div className="text-[9px] text-gray-400 font-sans">Halk: %{match.publicPicks['X']}</div>
-          </div>
-          <div className="bg-gray-900/80 p-2 rounded-xl border border-gray-800/80">
-            <div className="text-[10px] text-gray-500 font-sans font-bold">2 (Deplasman)</div>
-            <div className="text-sm font-black text-cyan-400 tabular-nums">{match.odds['2'].toFixed(2)}</div>
-            <div className="text-[9px] text-gray-400 font-sans">Halk: %{match.publicPicks['2']}</div>
-          </div>
+          {(['1', 'X', '2'] as const).map(out => {
+            const isFav = favorite === out;
+            const color = out === '1' ? 'text-emerald-400' : out === 'X' ? 'text-amber-400' : 'text-cyan-400';
+            return (
+              <div
+                key={out}
+                className={`bg-gray-900/80 p-2 rounded-xl border ${
+                  isFav ? 'border-amber-400/70 ring-1 ring-amber-400/40' : 'border-gray-800/80'
+                }`}
+              >
+                <div className="text-[10px] text-gray-500 font-sans font-bold">
+                  {out === '1' ? '1 (Ev Sahibi)' : out === 'X' ? 'X (Beraberlik)' : '2 (Deplasman)'}
+                  {isFav ? ' ★' : ''}
+                </div>
+                <div className={`text-sm font-black tabular-nums ${color}`}>{odds[out].toFixed(2)}</div>
+                <div className="text-[9px] text-gray-400 font-sans">
+                  İhtimal: %{implied[out].toFixed(0)} • Halk: %{match.publicPicks[out]}
+                </div>
+              </div>
+            );
+          })}
         </div>
+        {!isFinishedStatus(liveStatus) && !isLiveStatus(liveStatus) && (
+          <div className="px-3 py-2 bg-blue-950/40 border-b border-blue-500/20 text-center text-[11px] text-blue-200">
+            Maç başlamadı. İddaa piyasasında gerçekleşme ihtimali en yüksek sonuç:{' '}
+            <span className="font-black">{favorite} ({odds[favorite].toFixed(2)})</span>
+          </div>
+        )}
+        {isFinishedStatus(liveStatus) && (
+          <div className="px-3 py-2 bg-emerald-950/40 border-b border-emerald-500/20 text-center text-[11px] text-emerald-200">
+            Resmi skor: {liveStatus?.homeScore} - {liveStatus?.awayScore} (MS {liveStatus?.currentOutcome})
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex items-center space-x-1 p-2 bg-gray-900/40 border-b border-gray-800 overflow-x-auto scrollbar-none">
@@ -309,6 +326,12 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
             Hızlı Kupon Seçimi:
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => onApplyPick(favorite)}
+              className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold transition-colors"
+            >
+              En olası ({favorite})
+            </button>
             <button
               onClick={() => onApplyPick('1')}
               className="px-2.5 py-1.5 rounded-lg bg-gray-900 hover:bg-emerald-500 hover:text-white border border-gray-800 text-xs font-bold transition-colors"

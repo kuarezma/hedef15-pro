@@ -66,7 +66,7 @@ export function App() {
     runCalculation
   } = useTotoEngine();
 
-  // Unified Live Simulator & Mackolik Engine
+  // Unified live scores from real fixtures (no simulation)
   const liveSimulator = useLiveSimulator(matches, generatedColumns);
 
   const handleApplyValueSelections = (selections: { matchId: number; outcome: Outcome }[]) => {
@@ -88,9 +88,9 @@ export function App() {
   };
 
   const handleLockFinishedMatches = () => {
-    setMatches(prev => prev.map((m, idx) => {
-      const status = liveSimulator.matchStatuses[idx];
-      if (status && (status.status === 'FINISHED' || status.minute >= 90)) {
+    setMatches(prev => prev.map(m => {
+      const status = liveSimulator.matchStatuses.find(s => s.matchId === m.id);
+      if (status && status.status === 'FINISHED' && status.currentOutcome) {
         return {
           ...m,
           userPicks: {
@@ -413,6 +413,7 @@ export function App() {
       {selectedMatchForDetail && (
         <MatchDetailModal
           match={selectedMatchForDetail}
+          liveStatus={liveSimulator.matchStatuses.find(s => s.matchId === selectedMatchForDetail.id)}
           onClose={() => setSelectedMatchForDetail(null)}
           onApplyPick={handleApplyModalPick}
         />

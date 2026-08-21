@@ -1,234 +1,218 @@
-import { Match } from '../core/types';
+import { Match, MatchOdds, MatchProbabilities } from '../core/types';
+import { calculateImpliedProbabilities, getFavoriteOutcome } from '../core/valueEngine';
+
+function roundDistribution(implied: MatchProbabilities): MatchProbabilities {
+  const raw = {
+    '1': Math.round(implied['1']),
+    'X': Math.round(implied['X']),
+    '2': Math.round(implied['2'])
+  };
+  const drift = 100 - (raw['1'] + raw['X'] + raw['2']);
+  raw['1'] += drift;
+  return raw;
+}
+
+function peakPublicTowardFavorite(implied: MatchProbabilities, odds: MatchOdds): MatchProbabilities {
+  const favorite = getFavoriteOutcome(odds);
+  const peaked = { ...implied };
+  const takeFrom = (['1', 'X', '2'] as const).filter(o => o !== favorite);
+  peaked[favorite] = Math.min(92, implied[favorite] + 8);
+  peaked[takeFrom[0]] = Math.max(4, implied[takeFrom[0]] - 5);
+  peaked[takeFrom[1]] = 100 - peaked[favorite] - peaked[takeFrom[0]];
+  return roundDistribution(peaked);
+}
+
+function buildMatch(input: {
+  id: number;
+  homeTeam: string;
+  awayTeam: string;
+  league: string;
+  matchDate: string;
+  matchTime: string;
+  odds: MatchOdds;
+  group: string;
+}): Match {
+  const implied = calculateImpliedProbabilities(input.odds);
+  const aiPicks = roundDistribution(implied);
+  const publicPicks = peakPublicTowardFavorite(implied, input.odds);
+  const favorite = getFavoriteOutcome(input.odds);
+
+  return {
+    id: input.id,
+    order: input.id,
+    homeTeam: input.homeTeam,
+    awayTeam: input.awayTeam,
+    league: input.league,
+    matchDate: input.matchDate,
+    matchTime: input.matchTime,
+    odds: input.odds,
+    publicPicks,
+    aiPicks,
+    userPicks: {
+      '1': favorite === '1',
+      'X': favorite === 'X',
+      '2': favorite === '2'
+    },
+    userPercents: { ...aiPicks },
+    group: input.group
+  };
+}
 
 /**
- * 2026/2027 Sezonu 1. Hafta Resmi Spor Toto Bülteni (15 Maç)
+ * 2026/2027 Sezonu 2. Hafta — güncel Spor Toto tarzı 15 maçlık bülten.
+ * Skorlar canlı ESPN skor tablosundan gelir; burada yalnızca fikstür ve iddaa oranları tutulur.
  */
 export const INITIAL_MATCHES: Match[] = [
-  {
+  buildMatch({
     id: 1,
-    order: 1,
-    homeTeam: 'Galatasaray',
-    awayTeam: 'Çorum FK',
+    homeTeam: 'Erzurumspor FK',
+    awayTeam: 'Galatasaray',
     league: 'Trendyol Süper Lig',
     matchDate: 'Cuma',
-    matchTime: '21:00',
-    odds: { '1': 1.25, 'X': 5.20, '2': 8.50 },
-    publicPicks: { '1': 82, 'X': 12, '2': 6 },
-    aiPicks: { '1': 74, 'X': 18, '2': 8 },
-    userPicks: { '1': true, 'X': false, '2': false },
-    userPercents: { '1': 80, 'X': 15, '2': 5 },
+    matchTime: '21:30',
+    odds: { '1': 8.50, 'X': 5.20, '2': 1.28 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
     id: 2,
-    order: 2,
-    homeTeam: 'Kasımpaşa',
-    awayTeam: 'Trabzonspor',
+    homeTeam: 'Çaykur Rizespor',
+    awayTeam: 'Samsunspor',
     league: 'Trendyol Süper Lig',
     matchDate: 'Cumartesi',
     matchTime: '19:00',
-    odds: { '1': 3.10, 'X': 3.40, '2': 2.05 },
-    publicPicks: { '1': 24, 'X': 28, '2': 48 },
-    aiPicks: { '1': 29, 'X': 28, '2': 43 },
-    userPicks: { '1': false, 'X': true, '2': true },
-    userPercents: { '1': 25, 'X': 35, '2': 40 },
+    odds: { '1': 2.40, 'X': 3.20, '2': 2.90 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
     id: 3,
-    order: 3,
-    homeTeam: 'Konyaspor',
-    awayTeam: 'Çaykur Rizespor',
+    homeTeam: 'Çorum FK',
+    awayTeam: 'Kasımpaşa',
     league: 'Trendyol Süper Lig',
     matchDate: 'Cumartesi',
     matchTime: '19:00',
-    odds: { '1': 2.20, 'X': 3.25, '2': 2.95 },
-    publicPicks: { '1': 46, 'X': 30, '2': 24 },
-    aiPicks: { '1': 42, 'X': 31, '2': 27 },
-    userPicks: { '1': true, 'X': true, '2': false },
-    userPercents: { '1': 45, 'X': 35, '2': 20 },
+    odds: { '1': 2.30, 'X': 3.40, '2': 3.05 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
     id: 4,
-    order: 4,
-    homeTeam: 'Gaziantep FK',
-    awayTeam: 'Alanyaspor',
+    homeTeam: 'Fenerbahçe',
+    awayTeam: 'Konyaspor',
     league: 'Trendyol Süper Lig',
     matchDate: 'Cumartesi',
-    matchTime: '21:45',
-    odds: { '1': 2.35, 'X': 3.30, '2': 2.75 },
-    publicPicks: { '1': 41, 'X': 31, '2': 28 },
-    aiPicks: { '1': 39, 'X': 30, '2': 31 },
-    userPicks: { '1': true, 'X': true, '2': true },
-    userPercents: { '1': 35, 'X': 35, '2': 30 },
+    matchTime: '21:30',
+    odds: { '1': 1.32, 'X': 5.50, '2': 8.50 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
     id: 5,
-    order: 5,
-    homeTeam: 'Gençlerbirliği',
-    awayTeam: 'Fenerbahçe',
+    homeTeam: 'Eyüpspor',
+    awayTeam: 'Gaziantep FK',
     league: 'Trendyol Süper Lig',
-    matchDate: 'Cumartesi',
-    matchTime: '21:45',
-    odds: { '1': 6.80, 'X': 4.50, '2': 1.38 },
-    publicPicks: { '1': 8, 'X': 15, '2': 77 },
-    aiPicks: { '1': 12, 'X': 20, '2': 68 },
-    userPicks: { '1': false, 'X': false, '2': true },
-    userPercents: { '1': 10, 'X': 20, '2': 70 },
+    matchDate: 'Pazar',
+    matchTime: '19:00',
+    odds: { '1': 2.90, 'X': 3.10, '2': 2.50 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
     id: 6,
-    order: 6,
-    homeTeam: 'Başakşehir FK',
-    awayTeam: 'Kocaelispor',
+    homeTeam: 'Trabzonspor',
+    awayTeam: 'Başakşehir FK',
     league: 'Trendyol Süper Lig',
     matchDate: 'Pazar',
     matchTime: '19:00',
-    odds: { '1': 1.65, 'X': 3.65, '2': 4.60 },
-    publicPicks: { '1': 64, 'X': 22, '2': 14 },
-    aiPicks: { '1': 56, 'X': 25, '2': 19 },
-    userPicks: { '1': true, 'X': true, '2': false },
-    userPercents: { '1': 60, 'X': 25, '2': 15 },
+    odds: { '1': 2.10, 'X': 3.50, '2': 3.20 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
     id: 7,
-    order: 7,
-    homeTeam: 'Amed Sportif',
-    awayTeam: 'Erzurumspor FK',
-    league: 'Trendyol 1. Lig',
-    matchDate: 'Pazar',
-    matchTime: '19:00',
-    odds: { '1': 1.95, 'X': 3.20, '2': 3.60 },
-    publicPicks: { '1': 51, 'X': 29, '2': 20 },
-    aiPicks: { '1': 46, 'X': 30, '2': 24 },
-    userPicks: { '1': true, 'X': true, '2': false },
-    userPercents: { '1': 50, 'X': 30, '2': 20 },
-    group: '1. Lig'
-  },
-  {
-    id: 8,
-    order: 8,
-    homeTeam: 'Beşiktaş',
-    awayTeam: 'Eyüpspor',
+    homeTeam: 'Alanyaspor',
+    awayTeam: 'Beşiktaş',
     league: 'Trendyol Süper Lig',
     matchDate: 'Pazar',
-    matchTime: '21:45',
-    odds: { '1': 1.55, 'X': 3.90, '2': 5.20 },
-    publicPicks: { '1': 70, 'X': 18, '2': 12 },
-    aiPicks: { '1': 60, 'X': 23, '2': 17 },
-    userPicks: { '1': true, 'X': false, '2': false },
-    userPercents: { '1': 65, 'X': 25, '2': 10 },
+    matchTime: '21:30',
+    odds: { '1': 3.75, 'X': 3.60, '2': 1.91 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
+    id: 8,
+    homeTeam: 'Göztepe',
+    awayTeam: 'Gençlerbirliği',
+    league: 'Trendyol Süper Lig',
+    matchDate: 'Pazar',
+    matchTime: '21:30',
+    odds: { '1': 2.10, 'X': 3.30, '2': 3.40 },
+    group: 'Süper Lig'
+  }),
+  buildMatch({
     id: 9,
-    order: 9,
-    homeTeam: 'Samsunspor',
-    awayTeam: 'Göztepe',
+    homeTeam: 'Kocaelispor',
+    awayTeam: 'Amed Sportif',
     league: 'Trendyol Süper Lig',
     matchDate: 'Pazartesi',
-    matchTime: '21:00',
-    odds: { '1': 2.10, 'X': 3.20, '2': 3.25 },
-    publicPicks: { '1': 47, 'X': 31, '2': 22 },
-    aiPicks: { '1': 44, 'X': 30, '2': 26 },
-    userPicks: { '1': true, 'X': true, '2': true },
-    userPercents: { '1': 45, 'X': 30, '2': 25 },
+    matchTime: '21:30',
+    odds: { '1': 2.20, 'X': 3.20, '2': 3.30 },
     group: 'Süper Lig'
-  },
-  {
+  }),
+  buildMatch({
     id: 10,
-    order: 10,
     homeTeam: 'Arsenal',
-    awayTeam: 'Manchester City',
+    awayTeam: 'Coventry City',
+    league: 'Premier League',
+    matchDate: 'Cuma',
+    matchTime: '22:00',
+    odds: { '1': 1.22, 'X': 6.50, '2': 13.00 },
+    group: 'Avrupa'
+  }),
+  buildMatch({
+    id: 11,
+    homeTeam: 'Hull City',
+    awayTeam: 'Manchester United',
+    league: 'Premier League',
+    matchDate: 'Cumartesi',
+    matchTime: '14:30',
+    odds: { '1': 8.50, 'X': 5.00, '2': 1.37 },
+    group: 'Avrupa'
+  }),
+  buildMatch({
+    id: 12,
+    homeTeam: 'Espanyol',
+    awayTeam: 'Real Madrid',
+    league: 'La Liga',
+    matchDate: 'Cumartesi',
+    matchTime: '22:30',
+    odds: { '1': 7.00, 'X': 4.70, '2': 1.43 },
+    group: 'Avrupa'
+  }),
+  buildMatch({
+    id: 13,
+    homeTeam: 'Newcastle United',
+    awayTeam: 'Liverpool',
     league: 'Premier League',
     matchDate: 'Pazar',
     matchTime: '18:30',
-    odds: { '1': 2.40, 'X': 3.40, '2': 2.70 },
-    publicPicks: { '1': 38, 'X': 30, '2': 32 },
-    aiPicks: { '1': 39, 'X': 28, '2': 33 },
-    userPicks: { '1': true, 'X': true, '2': true },
-    userPercents: { '1': 35, 'X': 30, '2': 35 },
+    odds: { '1': 3.70, 'X': 4.00, '2': 1.91 },
     group: 'Avrupa'
-  },
-  {
-    id: 11,
-    order: 11,
-    homeTeam: 'RC Lens',
+  }),
+  buildMatch({
+    id: 14,
+    homeTeam: 'Stade Rennais',
     awayTeam: 'Paris Saint Germain',
     league: 'Ligue 1',
     matchDate: 'Pazar',
     matchTime: '21:45',
-    odds: { '1': 4.20, 'X': 3.80, '2': 1.72 },
-    publicPicks: { '1': 16, 'X': 24, '2': 60 },
-    aiPicks: { '1': 22, 'X': 24, '2': 54 },
-    userPicks: { '1': false, 'X': true, '2': true },
-    userPercents: { '1': 20, 'X': 30, '2': 50 },
+    odds: { '1': 5.50, 'X': 4.20, '2': 1.55 },
     group: 'Avrupa'
-  },
-  {
-    id: 12,
-    order: 12,
-    homeTeam: 'Sevilla',
-    awayTeam: 'Rayo Vallecano',
-    league: 'La Liga',
-    matchDate: 'Cumartesi',
-    matchTime: '22:30',
-    odds: { '1': 1.90, 'X': 3.35, '2': 3.85 },
-    publicPicks: { '1': 55, 'X': 27, '2': 18 },
-    aiPicks: { '1': 49, 'X': 28, '2': 23 },
-    userPicks: { '1': true, 'X': true, '2': false },
-    userPercents: { '1': 50, 'X': 30, '2': 20 },
-    group: 'Avrupa'
-  },
-  {
-    id: 13,
-    order: 13,
-    homeTeam: 'Racing Santander',
-    awayTeam: 'Villarreal',
-    league: 'La Liga',
-    matchDate: 'Pazar',
-    matchTime: '19:00',
-    odds: { '1': 4.10, 'X': 3.60, '2': 1.80 },
-    publicPicks: { '1': 18, 'X': 25, '2': 57 },
-    aiPicks: { '1': 22, 'X': 26, '2': 52 },
-    userPicks: { '1': false, 'X': true, '2': true },
-    userPercents: { '1': 20, 'X': 30, '2': 50 },
-    group: 'Avrupa'
-  },
-  {
-    id: 14,
-    order: 14,
-    homeTeam: 'Espanyol',
-    awayTeam: 'Levante',
-    league: 'La Liga',
-    matchDate: 'Pazar',
-    matchTime: '20:30',
-    odds: { '1': 2.05, 'X': 3.25, '2': 3.45 },
-    publicPicks: { '1': 49, 'X': 29, '2': 22 },
-    aiPicks: { '1': 45, 'X': 29, '2': 26 },
-    userPicks: { '1': true, 'X': true, '2': false },
-    userPercents: { '1': 50, 'X': 30, '2': 20 },
-    group: 'Avrupa'
-  },
-  {
+  }),
+  buildMatch({
     id: 15,
-    order: 15,
-    homeTeam: 'Celta Vigo',
-    awayTeam: 'Osasuna',
+    homeTeam: 'Elche',
+    awayTeam: 'Barcelona',
     league: 'La Liga',
     matchDate: 'Pazar',
-    matchTime: '22:00',
-    odds: { '1': 2.00, 'X': 3.30, '2': 3.60 },
-    publicPicks: { '1': 51, 'X': 28, '2': 21 },
-    aiPicks: { '1': 46, 'X': 29, '2': 25 },
-    userPicks: { '1': true, 'X': true, '2': true },
-    userPercents: { '1': 45, 'X': 30, '2': 25 },
+    matchTime: '22:30',
+    odds: { '1': 8.50, 'X': 5.75, '2': 1.32 },
     group: 'Avrupa'
-  }
+  })
 ];
 
 export const INITIAL_FILTERS = {
@@ -244,14 +228,14 @@ export const INITIAL_FILTERS = {
   groupFilters: [
     {
       groupId: 'super_lig',
-      groupName: 'Süper Lig (Maç 1-6, 8-9)',
-      matchIds: [1, 2, 3, 4, 5, 6, 8, 9],
+      groupName: 'Süper Lig (Maç 1-9)',
+      matchIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
       min1: 3,
       max1: 8,
       minX: 0,
       maxX: 4,
       min2: 0,
-      max2: 3,
+      max2: 4,
       minSurprise: 0,
       maxSurprise: 3,
       enabled: false

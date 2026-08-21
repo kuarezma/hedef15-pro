@@ -30,7 +30,7 @@ interface MyCouponsProps {
   currentCostTL: number;
   onLoadCouponIntoEditor: (coupon: SavedCoupon) => void;
   onOpenAutoPlayWithColumns: (columns: Column[]) => void;
-  liveOutcomes?: Outcome[];
+  liveOutcomes?: Array<Outcome | null>;
 }
 
 const STORAGE_SAVED_COUPONS = 'hedef15_saved_coupons_v1';
@@ -157,6 +157,7 @@ export const MyCoupons: React.FC<MyCouponsProps> = ({
   // Evaluate coupon against live / finished match results
   const evaluateCouponLiveHits = (coupon: SavedCoupon) => {
     if (!liveOutcomes || liveOutcomes.length !== 15) return null;
+    if (liveOutcomes.some(out => !out)) return null;
 
     let hits15 = 0;
     let hits14 = 0;
@@ -164,11 +165,11 @@ export const MyCoupons: React.FC<MyCouponsProps> = ({
     let hits12 = 0;
 
     for (const col of coupon.columns) {
-      const matchesCount = countMatches(col, liveOutcomes);
-      if (matchesCount === 15) hits15++;
-      else if (matchesCount === 14) hits14++;
-      else if (matchesCount === 13) hits13++;
-      else if (matchesCount === 12) hits12++;
+      const matchCount = countMatches(col, liveOutcomes as Outcome[]);
+      if (matchCount === 15) hits15++;
+      else if (matchCount === 14) hits14++;
+      else if (matchCount === 13) hits13++;
+      else if (matchCount === 12) hits12++;
     }
 
     return { hits15, hits14, hits13, hits12 };

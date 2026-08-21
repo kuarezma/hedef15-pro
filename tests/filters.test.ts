@@ -18,7 +18,10 @@ describe('Filter Engine', () => {
   };
 
   it('correctly categorizes favorite, plase, and surprise outcomes', () => {
-    const match = INITIAL_MATCHES[0]; // Galatasaray (1.62) vs Trabzonspor (4.80), X: 3.75
+    const match = {
+      ...INITIAL_MATCHES[0],
+      odds: { '1': 1.62, 'X': 3.75, '2': 4.80 }
+    };
     expect(getOutcomeCategory(match, '1')).toBe('FAVORITE');
     expect(getOutcomeCategory(match, 'X')).toBe('PLASE');
     expect(getOutcomeCategory(match, '2')).toBe('SURPRISE');
