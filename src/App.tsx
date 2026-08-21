@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Header, ActiveTab } from './components/Header';
 import { FormulaSelector } from './components/FormulaSelector';
 import { MatchList } from './components/MatchList';
@@ -63,7 +63,11 @@ export function App() {
     generatedColumns,
     calcSummary,
     isCalculating,
-    runCalculation
+    runCalculation,
+    bulletinMeta,
+    isReloadingBulletin,
+    bulletinError,
+    reloadBulletin
   } = useTotoEngine();
 
   // Unified live scores from real fixtures (no simulation)
@@ -205,6 +209,7 @@ export function App() {
         onOpenStats={() => setIsStatsOpen(true)}
         onOpenShareCard={() => setIsShareCardOpen(true)}
         onOpenExportModal={() => setIsExportModalOpen(true)}
+        bulletinLabel={bulletinMeta.label}
       />
 
       {/* Main Content Area */}
@@ -235,6 +240,10 @@ export function App() {
               matches={matches}
               formulaType={formulaType}
               matchStatuses={liveSimulator.matchStatuses}
+              bulletinLabel={bulletinMeta.label}
+              bulletinError={bulletinError}
+              isReloadingBulletin={isReloadingBulletin}
+              onReloadBulletin={() => { void reloadBulletin(true); }}
               onSelectMatchForDetail={(m) => setSelectedMatchForDetail(m)}
               onLockFinishedMatches={handleLockFinishedMatches}
               toggleMatchPick={toggleMatchPick}

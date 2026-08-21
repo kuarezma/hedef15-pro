@@ -1,29 +1,18 @@
 /**
  * Otomatik Spor Toto Haftalık Bülten & Canlı Fikstür Çekici
- * Bu script GitHub Actions Cron tarafından haftalık olarak çalıştırılır ve bülteni günceller.
+ * GitHub Actions cron ve elle çalıştırma: bu haftanın 15 maçını yazar.
  */
-
-import fs from 'fs';
+import { spawnSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..');
 
-async function run() {
-  console.log('🚀 Spor Toto güncel haftalık bülteni taranıyor...');
-  
-  // Hedef dosya: src/data/sampleBulletin.ts
-  const targetFile = path.resolve(__dirname, '../src/data/sampleBulletin.ts');
+const result = spawnSync('npx', ['vite-node', 'scripts/updateBulletin.ts'], {
+  cwd: root,
+  stdio: 'inherit',
+  env: process.env
+});
 
-  // Güncel haftanın maç listesini kontrol et ve doğrula
-  const exists = fs.existsSync(targetFile);
-  if (!exists) {
-    console.error('Bülten dosyası bulunamadı:', targetFile);
-    process.exit(1);
-  }
-
-  console.log('✅ Bülten ve oranlar başarıyla kontrol edildi ve güncellendi.');
-}
-
-run();
+process.exit(result.status === null ? 1 : result.status);

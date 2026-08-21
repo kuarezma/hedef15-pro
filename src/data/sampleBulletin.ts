@@ -22,7 +22,7 @@ function peakPublicTowardFavorite(implied: MatchProbabilities, odds: MatchOdds):
   return roundDistribution(peaked);
 }
 
-function buildMatch(input: {
+export function buildMatch(input: {
   id: number;
   homeTeam: string;
   awayTeam: string;
@@ -214,6 +214,13 @@ export const INITIAL_MATCHES: Match[] = [
     group: 'Avrupa'
   })
 ];
+
+export const BULLETIN_META = {
+  id: '2026-27-w2',
+  season: '2026/2027',
+  week: 2,
+  label: '2026/27 • 2. Hafta • 21-24 Ağustos'
+};
 
 export const INITIAL_FILTERS = {
   enabled: true,
