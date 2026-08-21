@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Match, FormulaType, GuaranteeTier, FilterConfig, Column, ReductionSummary } from '../core/types';
-import { INITIAL_MATCHES, INITIAL_FILTERS } from '../data/sampleBulletin';
+import { BULLETIN_META, INITIAL_MATCHES, INITIAL_FILTERS } from '../data/sampleBulletin';
 import { WorkerCalcPayload, WorkerCalcResponse } from '../workers/totoWorker';
+import { bulletinFingerprint, BulletinMeta, fetchWeeklyBulletin } from '../core/bulletinService';
 
-const STORAGE_KEY_MATCHES = 'hedef15_matches_v4';
+const STORAGE_KEY_MATCHES = 'hedef15_matches_v5';
 const STORAGE_KEY_FILTERS = 'hedef15_filters_v3';
 const STORAGE_KEY_FORMULA = 'hedef15_formula_v3';
 const STORAGE_KEY_TIER = 'hedef15_tier_v3';
@@ -11,17 +12,25 @@ const STORAGE_KEY_BUDGET = 'hedef15_budget_v3';
 
 const CALC_DEBOUNCE_MS = 150;
 
+function loadStoredMatchesIfCurrent(): Match[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_MATCHES) || localStorage.getItem('hedef15_matches_v4');
+    if (!raw) return INITIAL_MATCHES;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length !== 15) return INITIAL_MATCHES;
+    if (bulletinFingerprint(parsed) === bulletinFingerprint(INITIAL_MATCHES)) {
+      return parsed;
+    }
+  } catch (_) {}
+  return INITIAL_MATCHES;
+}
+
 export function useTotoEngine() {
-  const [matches, setMatches] = useState<Match[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_MATCHES);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === 15) return parsed;
-      }
-    } catch (_) {}
-    return INITIAL_MATCHES;
-  });
+  const [matches, setMatches] = useState<Match[]>(() => loadStoredMatchesIfCurrent());
+  const [bulletinMeta, setBulletinMeta] = useState<BulletinMeta>(BULLETIN_META);
+  const [isReloadingBulletin, setIsReloadingBulletin] = useState(false);
+  const [bulletinError, setBulletinError] = useState<string | null>(null);
+  const officialBulletinRef = useRef<Match[]>(INITIAL_MATCHES);
 
   const [formulaType, setFormulaType] = useState<FormulaType>(() => {
     try {
@@ -201,7 +210,7 @@ export function useTotoEngine() {
           }
         };
       } else if (presetName === 'CLEAR_ALL') {
-        const initial = INITIAL_MATCHES.find(im => im.id === m.id);
+        const initial = officialBulletinRef.current.find(im => im.id === m.id) || INITIAL_MATCHES.find(im => im.id === m.id);
         return initial ? { ...m, userPicks: { ...initial.userPicks } } : m;
       } else if (presetName === 'DOUBLE_SURPRISE') {
         return {
@@ -218,6 +227,48 @@ export function useTotoEngine() {
       return m;
     }));
   }, []);
+
+  const reloadBulletin = useCallback(async (force = true) => {
+    setIsReloadingBulletin(true);
+    setBulletinError(null);
+    try {
+      const live = await fetchWeeklyBulletin();
+      if (!live) {
+        if (force) {
+          officialBulletinRef.current = INITIAL_MATCHES;
+          setMatches(INITIAL_MATCHES);
+          setBulletinMeta(BULLETIN_META);
+        }
+        setBulletinError('Bu haftanın 15 maçlık fikstürü tamamlanamadı.');
+        return false;
+      }
+
+      officialBulletinRef.current = live.matches;
+      setBulletinMeta(live.meta);
+
+      setMatches(prev => {
+        if (!force && bulletinFingerprint(prev) === bulletinFingerprint(live.matches)) {
+          return prev;
+        }
+        return live.matches;
+      });
+      return true;
+    } catch (error) {
+      setBulletinError(error instanceof Error ? error.message : 'Fikstür alınamadı');
+      if (force) {
+        officialBulletinRef.current = INITIAL_MATCHES;
+        setMatches(INITIAL_MATCHES);
+        setBulletinMeta(BULLETIN_META);
+      }
+      return false;
+    } finally {
+      setIsReloadingBulletin(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reloadBulletin(false);
+  }, [reloadBulletin]);
 
   return {
     matches,
@@ -239,6 +290,10 @@ export function useTotoEngine() {
     generatedColumns,
     calcSummary,
     isCalculating,
-    runCalculation
+    runCalculation,
+    bulletinMeta,
+    isReloadingBulletin,
+    bulletinError,
+    reloadBulletin
   };
 }

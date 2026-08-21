@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { FormulaType, LiveMatchStatus, Match } from '../core/types';
-import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame, BarChart2, Lock, Radio, Clock } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, Layers, Search, CheckCircle2, Flame, BarChart2, Lock, Radio, Clock, RefreshCw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { displayOdds, findMatchStatus, isFinishedStatus, isLiveStatus, isScheduledStatus, statusLabel } from '../core/matchStatus';
 import { calculateImpliedProbabilities, getFavoriteOutcome } from '../core/valueEngine';
@@ -15,6 +15,10 @@ interface MatchListProps {
   setSinglePick: (matchId: number, outcome: '1' | 'X' | '2') => void;
   updateMatchPercent: (matchId: number, outcome: '1' | 'X' | '2', value: number) => void;
   applyPreset: (preset: 'ALL_FAVORITES' | 'BALANCED' | 'CLEAR_ALL' | 'DOUBLE_SURPRISE' | 'ALL_1' | 'ALL_X' | 'ALL_2') => void;
+  bulletinLabel?: string;
+  bulletinError?: string | null;
+  isReloadingBulletin?: boolean;
+  onReloadBulletin?: () => void;
 }
 
 export const MatchList: React.FC<MatchListProps> = ({
@@ -25,7 +29,11 @@ export const MatchList: React.FC<MatchListProps> = ({
   onLockFinishedMatches,
   toggleMatchPick,
   updateMatchPercent,
-  applyPreset
+  applyPreset,
+  bulletinLabel,
+  bulletinError,
+  isReloadingBulletin,
+  onReloadBulletin
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
@@ -82,7 +90,7 @@ export const MatchList: React.FC<MatchListProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
             <span className="text-xs font-black uppercase tracking-wider text-white">
-              Haftanın Canlı Durumu:
+              {bulletinLabel || 'Haftanın Canlı Durumu'}:
             </span>
           </div>
 
@@ -102,19 +110,31 @@ export const MatchList: React.FC<MatchListProps> = ({
           </div>
         </div>
 
-        {/* Action Button: Lock Finished Matches */}
-        {counts.finished > 0 && onLockFinishedMatches && (
-          <button
-            onClick={() => {
-              onLockFinishedMatches();
-              confetti({ particleCount: 50, spread: 60 });
-            }}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span>Biten Maçları Kilitle ({counts.finished})</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {onReloadBulletin && (
+            <button
+              onClick={onReloadBulletin}
+              disabled={isReloadingBulletin}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+              title="Bu haftanın güncel 15 maçlık fikstürünü çek"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isReloadingBulletin ? 'animate-spin' : ''}`} />
+              <span>{isReloadingBulletin ? 'Fikstür güncelleniyor...' : 'Bu Haftanın Fikstürünü Çek'}</span>
+            </button>
+          )}
+          {counts.finished > 0 && onLockFinishedMatches && (
+            <button
+              onClick={() => {
+                onLockFinishedMatches();
+                confetti({ particleCount: 50, spread: 60 });
+              }}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Biten Maçları Kilitle ({counts.finished})</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Header with Title & Action Presets */}
@@ -127,7 +147,11 @@ export const MatchList: React.FC<MatchListProps> = ({
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
-            İstediğiniz maça tıklayarak maç merkezini inceleyebilir, başlamayan maçlarda en olası iddaa oranını görebilir ve tek/çifte/kapalı tercih yapabilirsiniz.
+            {bulletinError ? (
+              <span className="text-amber-400">{bulletinError}</span>
+            ) : (
+              'İstediğiniz maça tıklayarak maç merkezini inceleyebilir, başlamayan maçlarda en olası iddaa oranını görebilir ve tek/çifte/kapalı tercih yapabilirsiniz.'
+            )}
           </p>
         </div>
 

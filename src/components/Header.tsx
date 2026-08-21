@@ -12,6 +12,7 @@ interface HeaderProps {
   onOpenStats: () => void;
   onOpenShareCard?: () => void;
   onOpenExportModal?: () => void;
+  bulletinLabel?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,7 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAutoPlay,
   onOpenStats,
   onOpenShareCard,
-  onOpenExportModal
+  onOpenExportModal,
+  bulletinLabel
 }) => {
   const tabs = [
     { id: 'coupon', label: 'Kupon & Formül', icon: Target },
@@ -61,7 +63,9 @@ export const Header: React.FC<HeaderProps> = ({
                   PRO
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-gray-400 truncate mt-0.5">Nesine • Mackolik • Spor Toto Hibrit</p>
+              <p className="text-[10px] sm:text-[11px] text-gray-400 truncate mt-0.5">
+                {bulletinLabel || 'Nesine • Mackolik • Spor Toto Hibrit'}
+              </p>
             </div>
           </div>
 
