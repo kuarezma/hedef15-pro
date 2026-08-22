@@ -1,27 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Match, FormulaType, GuaranteeTier, FilterConfig, Column, ReductionSummary } from '../core/types';
 import { INITIAL_MATCHES, INITIAL_FILTERS } from '../data/sampleBulletin';
+import { CURRENT_BULLETIN_ID, WEEK2_MATCHES, sameFixtureSet } from '../data/officialBulletins';
 import { WorkerCalcPayload, WorkerCalcResponse } from '../workers/totoWorker';
 
-const STORAGE_KEY_MATCHES = 'hedef15_matches_v4';
+const STORAGE_KEY_MATCHES = 'hedef15_matches_v5';
+const STORAGE_KEY_BULLETIN = 'hedef15_bulletin_id';
 const STORAGE_KEY_FILTERS = 'hedef15_filters_v3';
 const STORAGE_KEY_FORMULA = 'hedef15_formula_v3';
 const STORAGE_KEY_TIER = 'hedef15_tier_v3';
 const STORAGE_KEY_BUDGET = 'hedef15_budget_v3';
 
+function loadPersistedMatches(): Match[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_MATCHES);
+    const savedId = localStorage.getItem(STORAGE_KEY_BULLETIN);
+    if (saved && savedId === CURRENT_BULLETIN_ID) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length === 15 && sameFixtureSet(parsed, WEEK2_MATCHES)) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+  return INITIAL_MATCHES;
+}
+
 const CALC_DEBOUNCE_MS = 150;
 
 export function useTotoEngine() {
-  const [matches, setMatches] = useState<Match[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_MATCHES);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === 15) return parsed;
-      }
-    } catch (_) {}
-    return INITIAL_MATCHES;
-  });
+  const [matches, setMatches] = useState<Match[]>(() => loadPersistedMatches());
 
   const [formulaType, setFormulaType] = useState<FormulaType>(() => {
     try {
@@ -101,6 +108,7 @@ export function useTotoEngine() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_MATCHES, JSON.stringify(matches));
+      localStorage.setItem(STORAGE_KEY_BULLETIN, CURRENT_BULLETIN_ID);
       localStorage.setItem(STORAGE_KEY_FILTERS, JSON.stringify(filters));
       localStorage.setItem(STORAGE_KEY_FORMULA, formulaType);
       localStorage.setItem(STORAGE_KEY_TIER, guaranteeTier);

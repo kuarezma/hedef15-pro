@@ -75,22 +75,22 @@ export const AIChatAdvisor: React.FC<AIChatAdvisorProps> = ({
       const lower = text.toLowerCase();
 
       if (lower.includes('banko') || lower.includes('sağlam')) {
-        reply = '1. Hafta bülteninde yapay zeka modelimizin en yüksek güvenilirlik verdiği 3 banko maç:\n1. **Galatasaray - Çorum FK**: 1 (Ev sahibi %78 kazanma olasılığı)\n2. **Beşiktaş - Eyüpspor**: 1 (Ev sahibi %69 olasılık)\n3. **Gençlerbirliği - Fenerbahçe**: 2 (Deplasman %74 olasılık)\n\nBu bankoları kuponunuza uygulamak ister misiniz?';
+        reply = '2. Hafta resmi 15\'lisinde modelimizin en yüksek güvendiği 3 banko:\n1. **Erzurumspor FK - Galatasaray**: 2 (deplasman favori)\n2. **Olympique Marseille - Strasbourg**: 1\n3. **Fenerbahçe - Konyaspor**: 1\n\nBu bankoları kuponunuza uygulamak ister misiniz?';
         action = {
           label: 'Bu 3 Bankoyu Kupona Ekle',
           picks: [
-            { matchId: 1, outcomes: ['1'] },
-            { matchId: 8, outcomes: ['1'] },
-            { matchId: 5, outcomes: ['2'] }
+            { matchId: 1, outcomes: ['2'] },
+            { matchId: 2, outcomes: ['1'] },
+            { matchId: 6, outcomes: ['1'] }
           ]
         };
       } else if (lower.includes('sürpriz') || lower.includes('arbitraj')) {
-        reply = 'Piyasa oranları ile halk tercihleri arasındaki en yüksek (+EV) değer farkı şu 2 maçta tespit edildi:\n1. **Konyaspor - Rizespor**: Halk %58 ev sahibine yüklenmiş ancak Rizespor form grafiği yüksek (X-2 sürpriz barındırıyor).\n2. **Amed Sportif - Erzurumspor**: 1-X çifte şans yüksek değer taşıyor.';
+        reply = 'Piyasa oranları ile halk tercihleri arasındaki en yüksek (+EV) değer farkı şu 2 maçta:\n1. **Çaykur Rizespor - Samsunspor**: açık maç, tek işaret riskli (1-X).\n2. **Alanyaspor - Beşiktaş**: deplasman favori ama ev X-2 sürpriz barındırıyor.';
         action = {
           label: 'Sürpriz Tercihleri Kupona Uygula',
           picks: [
-            { matchId: 3, outcomes: ['X', '2'] },
-            { matchId: 7, outcomes: ['1', 'X'] }
+            { matchId: 4, outcomes: ['1', 'X'] },
+            { matchId: 12, outcomes: ['X', '2'] }
           ]
         };
       } else if (lower.includes('200') || lower.includes('kupon') || lower.includes('bütçe') || lower.includes('14')) {
@@ -100,29 +100,29 @@ export const AIChatAdvisor: React.FC<AIChatAdvisorProps> = ({
           formula: 'guaranteed_custom',
           tier: '14',
           picks: [
-            { matchId: 1, outcomes: ['1'] },
-            { matchId: 5, outcomes: ['2'] },
-            { matchId: 8, outcomes: ['1'] },
-            { matchId: 2, outcomes: ['X', '2'] },
-            { matchId: 10, outcomes: ['1', 'X'] }
+            { matchId: 1, outcomes: ['2'] },
+            { matchId: 2, outcomes: ['1'] },
+            { matchId: 6, outcomes: ['1'] },
+            { matchId: 4, outcomes: ['1', 'X'] },
+            { matchId: 9, outcomes: ['X', '2'] }
           ]
         };
-      } else if (lower.includes('arsenal') || lower.includes('city')) {
-        reply = '📊 **Arsenal vs Manchester City Analizi**:\nİki dev arasındaki son 5 maçın 3\'ü beraberlikle bitti. xG oranları başa baş (1.45 vs 1.52). Bu maçta tek tercihten kaçınarak **1-X** veya **1-X-2 kapatma** önerilir.';
+      } else if (lower.includes('liverpool') || lower.includes('newcastle')) {
+        reply = '📊 **Newcastle United vs Liverpool**: Deplasman favori (2). Tek işaret riskli; **X-2** daha dengeli.';
         action = {
-          label: 'Arsenal - City Maçını 1-X-2 Kapat',
-          picks: [{ matchId: 10, outcomes: ['1', 'X', '2'] }]
+          label: 'Newcastle - Liverpool X-2',
+          picks: [{ matchId: 9, outcomes: ['X', '2'] }]
         };
       } else {
-        reply = `Matematiksel analiz motorumuz isteğinizi inceledi. 15 maçlık bülten için oran dengesine göre optimize edilmiş bir strateji hazırladım. Aşağıdaki butondan kuponunuza aktarabilirsiniz.`;
+        reply = `Matematiksel analiz motorumuz isteğinizi inceledi. Güncel resmi 15'li için oran dengesine göre bir strateji hazırladım.`;
         action = {
           label: 'Önerilen Stratejiyi Kupona Aktar',
           formula: 'guaranteed_custom',
           tier: '14',
           picks: [
-            { matchId: 1, outcomes: ['1'] },
-            { matchId: 2, outcomes: ['1', '2'] },
-            { matchId: 10, outcomes: ['1', 'X'] }
+            { matchId: 1, outcomes: ['2'] },
+            { matchId: 2, outcomes: ['1'] },
+            { matchId: 6, outcomes: ['1'] }
           ]
         };
       }

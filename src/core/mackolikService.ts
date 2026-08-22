@@ -1,6 +1,7 @@
 import { LiveMatchStatus, Match, MatchOdds, Outcome } from './types';
 import { calculateImpliedProbabilities, getFavoriteOutcome } from './valueEngine';
 import { isFinishedStatus, scoreToOutcome } from './matchStatus';
+import { mergeLiveWithConfirmedOfficial } from './officialBoard';
 
 export interface GoalEvent {
   id: string;
@@ -28,7 +29,17 @@ export interface LiveFootballEvent {
   league?: string;
 }
 
-const ESPN_LEAGUES = ['tur.1', 'tur.2', 'eng.1', 'fra.1', 'esp.1', 'ita.1', 'ger.1'] as const;
+const ESPN_LEAGUES = [
+  'tur.1',
+  'tur.2',
+  'eng.1',
+  'eng.community_shield',
+  'fra.1',
+  'esp.1',
+  'ita.1',
+  'ger.1',
+  'ger.super_cup'
+] as const;
 
 const TEAM_ALIASES: Record<string, string> = {
   galatasaray: 'galatasaray',
@@ -95,7 +106,32 @@ const TEAM_ALIASES: Record<string, string> = {
   lens: 'lens',
   rclens: 'lens',
   manchestercity: 'mancity',
-  mancity: 'mancity'
+  mancity: 'mancity',
+  marseille: 'marseille',
+  olympiquemarseille: 'marseille',
+  om: 'marseille',
+  strasbourg: 'strasbourg',
+  racingstrasbourg: 'strasbourg',
+  rcstrasbourg: 'strasbourg',
+  betis: 'betis',
+  realbetis: 'betis',
+  sociedad: 'sociedad',
+  realsociedad: 'sociedad',
+  dortmund: 'dortmund',
+  borussiadortmund: 'dortmund',
+  bvb: 'dortmund',
+  bayern: 'bayern',
+  bayernmunich: 'bayern',
+  bayernmunih: 'bayern',
+  fcbayern: 'bayern',
+  atletico: 'atletico',
+  atleticomadrid: 'atletico',
+  atlmadrid: 'atletico',
+  torino: 'torino',
+  milan: 'milan',
+  acmilan: 'milan',
+  rayo: 'rayo',
+  rayovallecano: 'rayo'
 };
 
 /**
@@ -104,6 +140,8 @@ const TEAM_ALIASES: Record<string, string> = {
 export function normalizeTeamName(name: string): string {
   const folded = name
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
     .replace(/ı/g, 'i')
     .replace(/İ/g, 'i')
     .replace(/ş/g, 's')
@@ -452,14 +490,19 @@ export async function fetchLiveScoresFromMackolik(
 ): Promise<{ statuses: LiveMatchStatus[]; newGoals: GoalEvent[] }> {
   const events = await fetchLiveFootballEvents();
   if (events.length === 0) {
+    const fallback = previousStatuses.length === currentMatches.length
+      ? previousStatuses
+      : getInitialWeekendStatuses(currentMatches);
     return {
-      statuses: previousStatuses.length === currentMatches.length
-        ? previousStatuses
-        : getInitialWeekendStatuses(currentMatches),
+      statuses: mergeLiveWithConfirmedOfficial(currentMatches, fallback),
       newGoals: []
     };
   }
-  return applyLiveEventsToMatches(currentMatches, previousStatuses, events);
+  const applied = applyLiveEventsToMatches(currentMatches, previousStatuses, events);
+  return {
+    statuses: mergeLiveWithConfirmedOfficial(currentMatches, applied.statuses),
+    newGoals: applied.newGoals
+  };
 }
 
 export function allMatchesFinished(statuses: LiveMatchStatus[]): boolean {
