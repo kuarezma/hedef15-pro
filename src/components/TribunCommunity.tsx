@@ -50,7 +50,7 @@ export const TribunCommunity: React.FC<TribunCommunityProps> = ({
       authorTitle: 'Baş Futbol Yazarı • %86 Başarı',
       authorAvatar: '👑',
       title: 'Haftanın İdeal 14 Garanti Kuponu',
-      description: 'Galatasaray, Fenerbahçe ve Beşiktaş bankolarının yanına Avrupa liglerinde 3 kapalı çifte şans ekledik. İsraf kolonlar elendi.',
+      description: 'Galatasaray ve Fenerbahçe bankolarının yanına resmi 2. hafta Avrupa maçlarında 3 kapalı çifte şans ekledik. İsraf kolonlar elendi.',
       playsCount: 3840,
       likesCount: 1420,
       costTL: 240,
@@ -58,11 +58,11 @@ export const TribunCommunity: React.FC<TribunCommunityProps> = ({
       formulaType: 'guaranteed_custom',
       guaranteeTier: '14',
       samplePicks: [
-        { order: 1, match: 'Galatasaray - Çorum FK', pick: '1' },
-        { order: 5, match: 'Gençlerbirliği - Fenerbahçe', pick: '2' },
-        { order: 8, match: 'Beşiktaş - Eyüpspor', pick: '1' },
-        { order: 10, match: 'Arsenal - Man City', pick: '1-X' },
-        { order: 11, match: 'RC Lens - PSG', pick: 'X-2' }
+        { order: 1, match: 'Erzurumspor FK - Galatasaray', pick: '2' },
+        { order: 2, match: 'Marseille - Strasbourg', pick: '1' },
+        { order: 6, match: 'Fenerbahçe - Konyaspor', pick: '1' },
+        { order: 9, match: 'Newcastle - Liverpool', pick: 'X-2' },
+        { order: 12, match: 'Alanyaspor - Beşiktaş', pick: '2' }
       ],
       tags: ['Editörün Seçimi', '14 Garanti', 'Günün Bankosu']
     },
@@ -80,10 +80,10 @@ export const TribunCommunity: React.FC<TribunCommunityProps> = ({
       formulaType: 'nine_columns',
       guaranteeTier: '13',
       samplePicks: [
-        { order: 2, match: 'Kasımpaşa - Trabzonspor', pick: '1-X-2' },
-        { order: 4, match: 'Gaziantep FK - Alanyaspor', pick: '1-X-2' },
-        { order: 9, match: 'Samsunspor - Göztepe', pick: '1-X-2' },
-        { order: 10, match: 'Arsenal - Man City', pick: '1-X-2' }
+        { order: 4, match: 'Rizespor - Samsunspor', pick: '1-X-2' },
+        { order: 5, match: 'Çorum FK - Kasımpaşa', pick: '1-X-2' },
+        { order: 7, match: 'Dortmund - Bayern', pick: '1-X-2' },
+        { order: 14, match: 'Torino - Milan', pick: '1-X-2' }
       ],
       tags: ['Popüler', '9 Kolon', 'Düşük Bütçe']
     },
@@ -101,10 +101,10 @@ export const TribunCommunity: React.FC<TribunCommunityProps> = ({
       formulaType: 'site_ideal',
       guaranteeTier: '14',
       samplePicks: [
-        { order: 3, match: 'Konyaspor - Rizespor', pick: 'X-2' },
-        { order: 7, match: 'Amed Sportif - Erzurumspor', pick: '1-X' },
-        { order: 12, match: 'Sevilla - Vallecano', pick: '1-X' },
-        { order: 13, match: 'Santander - Villarreal', pick: 'X-2' }
+        { order: 4, match: 'Rizespor - Samsunspor', pick: 'X-2' },
+        { order: 8, match: 'Atlético - Villarreal', pick: '1-X' },
+        { order: 10, match: 'Eyüpspor - Gaziantep', pick: 'X-2' },
+        { order: 15, match: 'Kocaelispor - Amed', pick: '1-X' }
       ],
       tags: ['Yüksek Oran', 'AI Arbitraj', 'Sürpriz']
     }

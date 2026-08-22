@@ -19,6 +19,9 @@ describe('Real live score mapping', () => {
     expect(normalizeTeamName('Amed Sportif')).toBe(normalizeTeamName('Amed SFK'));
     expect(normalizeTeamName('İstanbul Başakşehir')).toBe(normalizeTeamName('Istanbul Basaksehir'));
     expect(namesMatch('Paris Saint Germain', 'Paris Saint-Germain')).toBe(true);
+    expect(namesMatch('Olympique Marseille', 'Marseille')).toBe(true);
+    expect(namesMatch('Bayern Münih', 'Bayern Munich')).toBe(true);
+    expect(namesMatch('Atlético Madrid', 'Atletico Madrid')).toBe(true);
     expect(namesMatch('Galatasaray', 'Konyaspor')).toBe(false);
   });
 
@@ -101,7 +104,7 @@ describe('Real live score mapping', () => {
         kickoffIso: '2026-08-22T16:00Z'
       }
     ]);
-    expect(liveFirst.statuses[2].currentOutcome).toBe('2');
+    expect(liveFirst.statuses.find(s => s.matchId === 5)?.currentOutcome).toBe('2');
     expect(liveFirst.newGoals).toHaveLength(0);
 
     const liveSecond = applyLiveEventsToMatches(INITIAL_MATCHES, liveFirst.statuses, [
@@ -116,7 +119,7 @@ describe('Real live score mapping', () => {
         kickoffIso: '2026-08-22T16:00Z'
       }
     ]);
-    expect(liveSecond.statuses[2].currentOutcome).toBe('X');
+    expect(liveSecond.statuses.find(s => s.matchId === 5)?.currentOutcome).toBe('X');
     expect(liveSecond.newGoals).toHaveLength(1);
     expect(liveSecond.newGoals[0].scoringTeam).toBe('Çorum FK');
   });
